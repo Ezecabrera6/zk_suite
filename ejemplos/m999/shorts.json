@@ -8,6 +8,7 @@
  "cenital_vf": "hflip,vflip,",
  "ignorar_izq": 70,
  "prompt": "Redragon King Ultra M999, mouse inalámbrico, base de carga, 54 gramos, DPI, polling rate, Hz, Mercado Libre.",
+ "corrige_local": "12_project/corrige_shorts.json",
  "corrige": {"redragón": "redragon", "red dragon": "redragon", "polio": "polling", "tenedlo": "tenelo", "modo": "mouse", "empieza": "pesa", "venid": "vení"},
  "shorts": [
   {"n": 1, "slug": "regular", "centrar": "mano", "tramos": [
@@ -19,7 +20,7 @@
    [889.28, 893.10, {"pantalla": [440, 60, 1020, 640]}],
    [894.38, 896.64, {"pantalla": [440, 60, 1020, 640]}],
    [990.00, 995.06, {}]]},
-  {"n": 2, "slug": "54_gramos", "tramos": [
+  {"n": 2, "slug": "54_gramos", "centrar": "mano", "tramos": [
    [255.62, 256.62, {}],
    [249.14, 252.82, {}],
    [259.70, 262.12, {}],
@@ -28,9 +29,9 @@
    [268.32, 269.84, {}],
    [270.60, 273.02, {}],
    [274.54, 277.54, {}]]},
-  {"n": 3, "slug": "se_mueve", "tramos": [
-   [552.48, ["min", 553.90, 554.60], {"vista": "ancho"}],
-   [556.00, 558.26, {"vista": "ancho"}],
+  {"n": 3, "slug": "se_mueve", "centrar": "mano", "tramos": [
+   [552.48, ["min", 553.90, 554.60], {"vista": "ancho", "cx": 900}],
+   [556.00, 558.26, {"vista": "ancho", "cx": 1000}],
    [571.14, 572.50, {"gfx": ["lt_malo", "adherencia"]}],
    [573.92, 575.40, {"vista": "ancho"}],
    [446.12, 447.88, {}],
@@ -45,6 +46,7 @@
    [301.40, 303.48, {}],
    [358.86, 360.76, {}],
    [363.40, 365.38, {}],
+   [368.90, ["min", 369.50, 370.40], {}],
    [372.42, 374.32, {}],
    [488.72, 489.90, {}]]}
  ]

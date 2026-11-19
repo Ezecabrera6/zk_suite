@@ -74,9 +74,9 @@ def mapa_rojo(a, b, ks=(0.15, 0.5, 0.85)):
     m[:, :CFG.get("ignorar_izq", 0)] *= 0.25                   # algo fijo al costado que no es el producto
     return m
 S480 = 1920 / 480
-def ventana_tramo(a, b):
-    """Una ventana por tramo: el producto no salta entre sus planos."""
-    cx = ventana(mapa_rojo(a, b, (0.1, 0.3, 0.5, 0.7, 0.9)).sum(0), int(CEN_W / S480 * 0.75)) * S480
+def ventana_tramo(a, b, cx=None):
+    """Una ventana por tramo: el producto no salta entre sus planos. {"cx": px} la fija a mano (centro en la cenital 1920)."""
+    if cx is None: cx = ventana(mapa_rojo(a, b, (0.1, 0.3, 0.5, 0.7, 0.9)).sum(0), int(CEN_W / S480 * 0.75)) * S480
     return CEN_W, 1080, int(max(0, min(1920 - CEN_W, cx - CEN_W / 2))) // 2 * 2, 0
 def encuadre(a, b, vista, win):
     cw, ch, x, y = win
@@ -118,7 +118,9 @@ def subtitulos(palabras, t_fin, path):
            "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n"
            "Style: S,Segoe UI Black,112,&H00FFFFFF,&H00FFFFFF,&H50000000,&H78000000,0,0,0,0,100,100,0,0,1,4,2,5,40,40,0,1\n\n"
            "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
-    fix = CFG.get("corrige", {})
+    fix = dict(CFG.get("corrige", {}))
+    if CFG.get("corrige_local") and ruta(CFG["corrige_local"]).exists():   # correcciones con nombres propios: quedan en la carpeta del video
+        fix.update(json.loads(ruta(CFG["corrige_local"]).read_text(encoding="utf-8-sig")))
     palabras = [dict(p) for p in palabras if p["w"].strip(".,¡!¿?").lower() not in ("ey", "eh", "ehm", "em", "ah", "pues", "hmm")]
     junta = []
     for p in palabras:                                          # «45» + «.000» → «45.000»
@@ -170,7 +172,7 @@ def build(s):
     planos, t, k = [], 0.0, 0
     for tr in tramos:
         F = round((tr["b"] - tr["a"]) * FPS); n = max(1, round(F / FPS / 2.2)); base = tr.get("vista", "cen")
-        MODO = tr.get("centrar", modo_short); tr["sal"] = t; tr["b"] = tr["a"] + F / FPS; tr["win"] = ventana_tramo(tr["a"], tr["b"])
+        MODO = tr.get("centrar", modo_short); tr["sal"] = t; tr["b"] = tr["a"] + F / FPS; tr["win"] = ventana_tramo(tr["a"], tr["b"], tr.get("cx"))
         cortes = [round(F * j / n) for j in range(n + 1)]
         for j in range(n):
             vista = base if k % 2 == 0 else ("ancho_z" if base == "ancho" else "zoom")
