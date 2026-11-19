@@ -145,6 +145,20 @@ def placa(gid, path):
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); im.alpha_composite(g, (40, H - g.height - 300)); im.save(path)
 
 
+def placa_cierre(path):
+    """Cierre (pedido 19/11: «le falta la llamada a ir al video»): la miniatura real del largo y abajo un lower third
+    con el llamado, centrados en la mitad del producto. Va encima de los últimos segundos, sin estirar el Short."""
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "graficos")); from lower_third import lower_third
+    c = CFG["cierre"]; th = Image.open(ruta(c["miniatura"])).convert("RGBA"); tw = 820
+    th = th.resize((tw, round(th.height * tw / th.width)), Image.LANCZOS)
+    mask = Image.new("L", th.size, 0); ImageDraw.Draw(mask).rounded_rectangle((0, 0, *th.size), 18, fill=255); th.putalpha(mask)
+    lt = lower_third(1920, 1080, c["rotulo"], c["dato"]); lt = lt.crop(lt.getchannel("A").getbbox())
+    im = Image.new("RGBA", (W, H), (0, 0, 0, 0)); y = TOP_H + 120
+    sh = Image.new("RGBA", (W, H), (0, 0, 0, 0)); ImageDraw.Draw(sh).rounded_rectangle(((W - tw) // 2, y + 10, (W + tw) // 2, y + th.height + 10), 18, fill=(0, 0, 0, 140))
+    im.alpha_composite(sh.filter(ImageFilter.GaussianBlur(14))); im.alpha_composite(th, ((W - tw) // 2, y))
+    im.alpha_composite(lt, ((W - lt.width) // 2, y + th.height + 30)); im.save(path)
+
+
 def build(s):
     global MODO
     modo_short = s.get("centrar", CFG.get("centrar", "rojo"))   # cada tramo puede pedir el suyo con {"centrar": ...}
@@ -225,6 +239,10 @@ def build(s):
         ins += ["-loop", "1", "-framerate", str(FPS), "-t", f"{dur:.3f}", "-itsoffset", f"{en:.3f}", "-i", str(pg)]
         fc.append(f"[{2 + k}:v]format=rgba,fade=t=in:st={en:.3f}:d=0.15:alpha=1,fade=t=out:st={en + dur - 0.15:.3f}:d=0.15:alpha=1[g{k}]")
         fc.append(f"{last}[g{k}]overlay=0:0:eof_action=pass[x{k}]"); last = f"[x{k}]"
+    if CFG.get("cierre"):
+        dur = float(CFG["cierre"].get("dur", 3.0)); en = max(0.0, total - dur); pc = wk / "cierre.png"; placa_cierre(pc); k = len(gfx)
+        ins += ["-loop", "1", "-framerate", str(FPS), "-t", f"{dur:.3f}", "-itsoffset", f"{en:.3f}", "-i", str(pc)]
+        fc.append(f"[{2 + k}:v]format=rgba,fade=t=in:st={en:.3f}:d=0.2:alpha=1[gc]"); fc.append(f"{last}[gc]overlay=0:0:eof_action=pass[xc]"); last = "[xc]"
     fc.append(f"{last}format=yuv420p[v]")
     out = OUT / f"{slug}.mp4"
     run(ins + ["-filter_complex", ";".join(fc), "-map", "[v]", "-map", "1:a", "-c:v", "h264_nvenc", "-preset", "p6", "-cq", "20", "-b:v", "0", "-g", "60",

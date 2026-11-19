@@ -4,6 +4,7 @@
  "voz": "10_work/audio/voz_c.wav",
  "gfx": "10_work/gfx",
  "programa": "<ZK_TOMA>.mp4",
+ "cierre": {"miniatura": "11_exports/miniaturas/m999_miniatura.jpg", "rotulo": "VIDEO COMPLETO", "dato": "tocá el link de abajo", "dur": 3.0},
  "cenital_vf": "hflip,vflip,",
  "ignorar_izq": 70,
  "prompt": "Redragon King Ultra M999, mouse inalámbrico, base de carga, 54 gramos, DPI, polling rate, Hz, Mercado Libre.",
