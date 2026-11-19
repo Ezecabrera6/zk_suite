@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>vedit · Original vs Exportado</title>
+<style>
+body{margin:0;background:#101114;color:#ddd;font:13px/1.4 system-ui,sans-serif}
+.top{display:flex;gap:10px;align-items:center;padding:8px 10px;flex-wrap:wrap}
+.pair{display:flex;gap:8px;padding:0 10px}
+.cell{flex:1;min-width:0}
+.cell h2{margin:0 0 4px;font-size:13px;font-weight:600;color:#fff}
+.stage{position:relative;aspect-ratio:16/9;background:#000}
+.stage video{position:absolute;inset:0;width:100%;height:100%}
+.grid{position:absolute;inset:0;pointer-events:none;z-index:5}
+.grid div{position:absolute}
+.v{top:0;bottom:0;width:1px}.h{left:0;right:0;height:1px}
+.t{background:rgba(255,255,255,.28)}.c{background:#ff2d2d;z-index:3}
+.cv{left:calc(50% - 1px)!important;width:2px!important}.ch{top:calc(50% - 1px)!important;height:2px!important}
+.safe{left:5%;right:5%;top:5.926%;bottom:5.926%;outline:1px dashed rgba(255,210,63,.8)}
+.pip{outline:1px dashed rgba(80,200,255,.9);top:0;height:39.81%;width:28.23%}
+.pip .pv{position:absolute;left:calc(50% - 1px);top:0;bottom:0;width:2px;background:rgba(80,200,255,.95)}
+.pip .ph{position:absolute;top:calc(50% - 1px);left:0;right:0;height:2px;background:rgba(80,200,255,.95)}
+.nosrc{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:#888;z-index:4}
+.bar{padding:6px 10px}.bar input{width:100%}
+button,select{background:#2a2c31;color:#eee;border:1px solid #444;padding:5px 10px;font:inherit;cursor:pointer}
+.tc{font-family:monospace;font-size:14px}
+</style></head><body>
+<div class="top">
+  <button id="play">▶ Play / ❚❚ Pausa</button>
+  <button data-d="-5">−5 s</button><button data-d="-1">−1 s</button><button data-f="-1">−1 f</button><button data-f="1">+1 f</button><button data-d="1">+1 s</button><button data-d="5">+5 s</button>
+  <label>Izquierda: <select id="left"><option value="main">ORIGINAL (grabación OBS)</option><option value="base">Video de la editora</option></select></label>
+  <label>Derecha: <select id="right"></select></label>
+  <label><input type="checkbox" id="g" checked> grilla (G)</label>
+  <span>velocidad: <button class="sp" data-r="1">1×</button><button class="sp" data-r="1.25">1,25×</button><button class="sp" data-r="1.5">1,5×</button><button class="sp" data-r="2">2×</button><button class="sp" data-r="3">3×</button></span>
+  <span class="tc">export <b id="te">—</b> · original <b id="ts">—</b></span>
+</div>
+<div class="pair">
+  <div class="cell"><h2 id="lt">ORIGINAL — mismo momento (sin edición)</h2><div class="stage"><video id="L" muted preload="auto"></video><div class="nosrc" id="nl">(logo / outro: no existe en el original)</div><div class="grid"></div></div></div>
+  <div class="cell"><h2 id="rt">ÚLTIMO EXPORTADO</h2><div class="stage"><video id="R" preload="auto"></video><div class="grid"></div></div></div>
+</div>
+<div class="bar"><input type="range" id="seek" min="0" max="1000" value="0"></div>
+<script>
+const $=s=>document.querySelector(s), L=$('#L'), R=$('#R');
+let D=null, seq=[], starts=[];
+const fmt=t=>{if(t==null||isNaN(t))return'—';const m=Math.floor(t/60),s=t-m*60;return m+':'+(s<10?'0':'')+s.toFixed(2)};
+const G='<div class="v t" style="left:33.333%"></div><div class="v t" style="left:66.667%"></div><div class="h t" style="top:33.333%"></div><div class="h t" style="top:66.667%"></div><div class="v c cv"></div><div class="h c ch"></div><div class="safe"></div><div class="pip" style="left:0"><div class="pv"></div><div class="ph"></div></div><div class="pip" style="right:0;opacity:.5"><div class="pv"></div><div class="ph"></div></div>';
+document.querySelectorAll('.grid').forEach(g=>g.innerHTML=G);
+function setGrid(on){document.querySelectorAll('.grid').forEach(g=>g.style.display=on?'block':'none');$('#g').checked=on}
+$('#g').onchange=e=>setGrid(e.target.checked);
+function editToSrc(t){let acc=0;for(const c of seq){const d=(c.out-c.in)/(c.speed||1);if(t<acc+d)return c.source==='main'?c.in+(t-acc)*(c.speed||1):null;acc+=d}return null}
+function srcToBase(s){for(const g of D.conform){if(s>=g.source_start&&s<g.source_end)return g.edited_start+(s-g.source_start)}return null}
+function leftTime(t){const s=editToSrc(t);if(s==null)return null;return $('#left').value==='main'?s:srcToBase(s)}
+function ver(n){const m=n.match(/v(\d{3})/);return m?+m[1]:0}
+function hhmm(p){const d=new Date(p.mtime*1000);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function label(p){return label0(p)+'  ·  '+hhmm(p)}
+function label0(p){if(/^3setups/.test(p.name))return '★ FINAL 1080p — '+p.name;const v=ver(p.name);
+  if(/_mix\.mp4$/.test(p.name))return 'v'+String(v).padStart(3,'0')+' · completo (con música)';
+  const r=p.name.match(/edit(\d+)-(\d+)/);return 'v'+String(v).padStart(3,'0')+' · tramo '+(r?r[1]+'–'+r[2]+' s':p.name)}
+let lastTop=null;
+function buildList(keep){
+  const P=D.previews.filter(p=>Date.now()/1000-p.mtime>15);  // no mostrar archivos que se están escribiendo
+  const fin=P.filter(p=>/^3setups/.test(p.name)).sort((a,b)=>b.mtime-a.mtime);
+  const full=P.filter(p=>/_mix\.mp4$/.test(p.name)&&!/^3setups/.test(p.name)).sort((a,b)=>ver(b.name)-ver(a.name)||b.mtime-a.mtime);
+  const parts=P.filter(p=>!/^3setups/.test(p.name)&&!/_mix\.mp4$/.test(p.name)&&/edit\d+-\d+/.test(p.name)).sort((a,b)=>ver(b.name)-ver(a.name)||b.mtime-a.mtime);
+  const og=(t,arr)=>arr.length?`<optgroup label="${t}">`+arr.map(p=>`<option value="${p.url}">${label(p)}</option>`).join('')+'</optgroup>':'';
+  $('#right').innerHTML=og('FINAL',fin)+og('Exports completos (más nuevo arriba)',full)+og('Tramos de prueba',parts);
+  const top=[fin[0],full[0]].filter(Boolean).sort((a,b)=>b.mtime-a.mtime)[0]||parts[0];
+  if(keep&&[...$('#right').options].some(o=>o.value===keep))$('#right').value=keep; else if(top)$('#right').value=top.url;
+  return top}
+async function load(){
+  D=await (await fetch('/api/ab',{cache:'no-store'})).json(); seq=D.current.sequence||[];
+  const top=buildList(null);
+  if(top){R.src=top.url;$('#rt').textContent='ÚLTIMO EXPORTADO — '+label(top);lastTop=top.url}
+  setLeftSrc();
+}
+setInterval(async()=>{try{const d=await (await fetch('/api/ab',{cache:'no-store'})).json();D.previews=d.previews;seq=d.current.sequence||seq;
+  const cur=$('#right').value;const top=buildList(cur);
+  if(top&&top.url!==lastTop){lastTop=top.url;const t=R.currentTime;R.src=top.url;$('#right').value=top.url;$('#rt').textContent='ÚLTIMO EXPORTADO — '+label(top)+'  (nuevo, cargado automáticamente)';R.currentTime=t}}catch(e){}},5000);
+function setLeftSrc(){const k=$('#left').value;L.src=D.sources[k].url;$('#lt').textContent=(k==='main'?'ORIGINAL (grabación OBS)':'VIDEO DE LA EDITORA')+' — mismo momento, sin edición'}
+$('#left').onchange=()=>{setLeftSrc();sync(true)};
+$('#right').onchange=e=>{const t=R.currentTime;R.src=e.target.value;$('#rt').textContent='EXPORTADO — '+e.target.selectedOptions[0].textContent;R.currentTime=t};
+function sync(force){const lt=leftTime(R.currentTime);$('#te').textContent=fmt(R.currentTime);$('#ts').textContent=fmt(editToSrc(R.currentTime));
+  if(lt==null){$('#nl').style.display='flex';L.pause();return}
+  $('#nl').style.display='none';
+  if(force||Math.abs(L.currentTime-lt)>0.2*RATE+0.1)L.currentTime=lt;
+  if(!R.paused&&L.paused)L.play().catch(()=>{}); if(R.paused&&!L.paused)L.pause()}
+function tick(){sync(false);if(R.duration)$('#seek').value=R.currentTime/R.duration*1000;requestAnimationFrame(tick)}
+$('#play').onclick=()=>{R.paused?R.play():R.pause()};
+R.onpause=()=>L.pause(); R.onseeked=()=>sync(true);
+$('#seek').oninput=e=>{if(R.duration)R.currentTime=e.target.value/1000*R.duration};
+document.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{R.currentTime=Math.max(0,R.currentTime+ +b.dataset.d)});
+document.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{R.pause();R.currentTime=Math.max(0,R.currentTime+b.dataset.f/30)});
+document.addEventListener('keydown',e=>{if(e.target.tagName==='SELECT')return;
+  if(e.code==='Space'){e.preventDefault();$('#play').click()} else if(e.key==='g'||e.key==='G')setGrid(!$('#g').checked);
+  else if(e.code==='ArrowLeft')R.currentTime-=1; else if(e.code==='ArrowRight')R.currentTime+=1;
+  else if(e.key===',' ){R.pause();R.currentTime-=1/30} else if(e.key==='.'){R.pause();R.currentTime+=1/30}});
+let RATE=1;
+function setRate(r){RATE=r;R.playbackRate=r;L.playbackRate=r;R.preservesPitch=true;
+  document.querySelectorAll('.sp').forEach(b=>b.style.background=(+b.dataset.r===r)?'#2F7DE1':'');try{localStorage.setItem('vedit_rate',r)}catch(e){}}
+document.querySelectorAll('.sp').forEach(b=>b.onclick=()=>setRate(+b.dataset.r));
+R.addEventListener('loadedmetadata',()=>setRate(RATE)); L.addEventListener('loadedmetadata',()=>{L.playbackRate=RATE});
+document.addEventListener('keydown',e=>{if(e.key==='['){const r=[1,1.25,1.5,2,3];setRate(r[Math.max(0,r.indexOf(RATE)-1)])}
+  if(e.key===']'){const r=[1,1.25,1.5,2,3];setRate(r[Math.min(r.length-1,r.indexOf(RATE)+1)])}});
+try{const r=+localStorage.getItem('vedit_rate');if(r)RATE=r}catch(e){}
+load().then(()=>{setRate(RATE);requestAnimationFrame(tick)});
+</script></body></html>

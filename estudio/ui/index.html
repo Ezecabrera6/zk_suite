@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estudio</title>
+<style>
+:root{--bg:#0d0e11;--pn:#16181d;--pn2:#1d2026;--ln:#2a2e36;--tx:#eceef1;--dim:#8d929b;--acc:#ffc531;--cut:#c2412d;--ok:#3ddc84;--cam-cara:#ff7a59;--cam-producto:#3fa9f5;--cam-neutro:#7bd88f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.4 "Segoe UI",system-ui,sans-serif}
+header{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--pn);border-bottom:1px solid var(--ln);flex-wrap:wrap}
+header h1{font-size:16px;margin:0 8px 0 0}
+select,input,button{font:inherit;color:var(--tx);background:var(--pn2);border:1px solid var(--ln);border-radius:6px;padding:6px 9px}
+button{cursor:pointer}button:hover{border-color:var(--acc)}button.prim{background:var(--acc);color:#111;border-color:var(--acc);font-weight:600}
+button:disabled{opacity:.4;cursor:default}
+#trabajo{margin-left:auto;color:var(--acc);font-size:13px}
+main{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:12px;padding:12px 14px;height:calc(100vh - 52px)}
+.col{display:flex;flex-direction:column;gap:8px;min-height:0}
+#escena{position:relative;background:#000;border-radius:8px;overflow:hidden;aspect-ratio:16/9;max-height:56vh}
+#escena video{width:100%;height:100%;display:block}
+#lt{position:absolute;left:3.3%;bottom:5.9%;background:rgba(18,19,22,.88);border-radius:6px;padding:1.3% 2.3% 1.4%;font-family:Consolas,monospace;font-weight:700;display:none;pointer-events:none}
+#lt small{display:block;font-size:clamp(8px,1.3vw,14px);letter-spacing:.12em;color:#ebedf0}#lt b{display:block;font-size:clamp(12px,2.4vw,26px);color:#fff}
+#camtag{position:absolute;right:8px;top:8px;background:#000b;border-radius:5px;padding:2px 8px;font-size:12px}
+.barra{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+#tc{font-variant-numeric:tabular-nums;color:var(--dim)}#tc b{color:var(--tx)}
+canvas{width:100%;height:70px;background:var(--pn);border-radius:6px;cursor:pointer;display:block}
+#pasos{display:flex;gap:6px;flex-wrap:wrap;font-size:12px}
+.paso{background:var(--pn2);border-radius:20px;padding:3px 10px;color:var(--dim)}.paso.listo{color:var(--ok)}.paso.corriendo{color:var(--acc)}.paso.error{color:#ff6b6b}
+aside{background:var(--pn);border-radius:8px;display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;border-bottom:1px solid var(--ln)}.tabs button{flex:1;border:0;border-radius:0;background:none;padding:9px 4px;color:var(--dim)}
+.tabs button.on{color:var(--acc);box-shadow:inset 0 -2px var(--acc)}
+.panel{padding:10px;overflow:auto;flex:1;display:none}.panel.on{display:block}
+#texto p{margin:0 0 8px;line-height:1.7}
+#texto span{cursor:pointer;border-radius:3px;padding:0 1px}#texto span:hover{background:#ffffff14}
+#texto span.cut{color:#6f747c;text-decoration:line-through;text-decoration-color:var(--cut)}
+#texto span.now{background:var(--acc);color:#111}
+#texto .t{color:var(--dim);font-size:11px;margin-right:4px;font-variant-numeric:tabular-nums}
+#sel{position:sticky;top:-10px;background:var(--pn2);border:1px solid var(--acc);border-radius:8px;padding:8px;margin:-2px 0 10px;display:none;gap:6px;flex-wrap:wrap;z-index:2}
+.fila{display:flex;gap:8px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--ln)}.fila .x{margin-left:auto}
+.fila.off{opacity:.45}.tag{font-size:11px;border-radius:4px;padding:1px 6px;background:var(--pn2);color:var(--dim)}
+label{display:block;color:var(--dim);font-size:12px;margin:8px 0 3px}
+.ayuda{color:var(--dim);font-size:12px;margin:6px 0}
+#nuevo{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:9}
+#nuevo .caja{background:var(--pn);border:1px solid var(--ln);border-radius:10px;padding:18px;width:min(560px,94vw);max-height:90vh;overflow:auto}
+#nuevo h2{margin:0 0 6px;font-size:17px}
+table{width:100%;border-collapse:collapse}td{padding:4px}
+#msg{color:#ff8a7a;min-height:1.2em;font-size:13px}
+a{color:var(--acc)}
+@media(max-width:900px){main{grid-template-columns:1fr;height:auto}aside{min-height:60vh}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Estudio</h1>
+  <select id="proy" aria-label="Proyecto"></select>
+  <button id="bNuevo">+ Nuevo video desde los crudos</button>
+  <div id="pasos"></div>
+  <span id="trabajo"></span>
+</header>
+<main>
+  <div class="col">
+    <div id="escena"><video id="v" preload="auto" playsinline></video><div id="lt"><small></small><b></b></div><span id="camtag"></span></div>
+    <div class="barra">
+      <button id="bPlay" title="Espacio">▶</button><button id="bAtras" title="←">−5 s</button><button id="bAdel" title="→">+5 s</button>
+      <button id="bModo" title="Ver la edición (saltando los cortes) o la toma entera">Viendo: edición</button>
+      <span id="tc"></span>
+      <span style="margin-left:auto" class="ayuda">Ctrl+Z deshace (seguido, va más atrás) · seleccioná palabras para cortarlas</span>
+    </div>
+    <canvas id="tl" height="70" title="Toma entera: gris = cortado, amarillo = textos, colores = cámara forzada. Clic para ir."></canvas>
+    <div id="msg" role="status"></div>
+  </div>
+  <aside>
+    <div class="tabs" role="tablist">
+      <button data-p="texto" class="on">Texto</button><button data-p="cortes">Cortes</button><button data-p="textos">Carteles</button>
+      <button data-p="versiones">Versiones</button><button data-p="render">Render</button>
+    </div>
+    <div class="panel on" id="p-texto">
+      <div id="sel"><b id="selInfo" style="width:100%"></b>
+        <button id="sCortar">Cortar</button><button id="sRest">Volver a meter</button>
+        <button data-cam="cara">Cámara: cara</button><button data-cam="producto">Cámara: producto</button><button data-cam="neutro">Neutro</button><button data-cam="auto">Auto</button>
+        <button id="sCartel">Cartel acá</button></div>
+      <div id="texto"></div>
+    </div>
+    <div class="panel" id="p-cortes">
+      <div class="barra"><label style="margin:0">Silencios de más de</label><input id="silMin" type="number" value="0.9" min="0.3" max="5" step="0.1" style="width:70px"> s
+        <button id="bSil" class="prim">Borrar silencios</button></div>
+      <p class="ayuda">Deja 0,25 s de aire al final de cada frase y 0,15 s antes de la siguiente. Destildá un corte para devolverlo (los gatos, los ruidos de la caja).</p>
+      <div id="listaCortes"></div>
+    </div>
+    <div class="panel" id="p-textos">
+      <p class="ayuda">Cartel oficial (lower third): caja oscura, sin línea de color, Consolas Bold. Entra en el momento actual del video.</p>
+      <label for="cRot">Rótulo (chico, arriba)</label><input id="cRot" maxlength="40" placeholder="PESO" style="width:100%">
+      <label for="cDato">Dato</label><input id="cDato" maxlength="70" placeholder="54 g" style="width:100%">
+      <label for="cDur">Duración (s)</label><input id="cDur" type="number" value="3.5" min="1" max="8" step="0.5" style="width:90px">
+      <div class="barra" style="margin-top:10px"><button id="bCartel" class="prim">Agregar en el momento actual</button></div>
+      <div id="listaTextos" style="margin-top:12px"></div>
+    </div>
+    <div class="panel" id="p-versiones"><p class="ayuda">Cada cambio es una versión. Tocá una para volver a ella (se guarda como versión nueva: no se pierde nada).</p><div id="listaVers"></div></div>
+    <div class="panel" id="p-render">
+      <div class="barra"><button id="bR360" class="prim">Preview 360p</button><button id="bR1080">Final 1080p</button></div>
+      <p class="ayuda">Cámara según lo que se dice, corte cada ~2,3 s, voz a −14 LUFS y los carteles. Los planos se guardan: si cambiás un corte, solo se rehace lo que cambió.</p>
+      <div id="informe" class="ayuda"></div>
+      <div id="listaRenders"></div>
+      <div id="reproRender" style="margin-top:10px"></div>
+    </div>
+  </aside>
+</main>
+
+<div id="nuevo" role="dialog" aria-modal="true" aria-labelledby="nTit"><div class="caja">
+  <h2 id="nTit">Nuevo video desde los crudos</h2>
+  <p class="ayuda">Tomas de OBS en la carpeta de grabaciones. Los crudos se leen donde están: no se copian ni se tocan.</p>
+  <label for="nToma">Toma</label><select id="nToma" style="width:100%"></select>
+  <div id="nInfo" class="ayuda"></div>
+  <label for="nSlug">Nombre del proyecto (minúsculas, sin espacios)</label><input id="nSlug" style="width:100%" placeholder="mouse_m999">
+  <label for="nPista">Pista del micrófono (sin filtros de OBS)</label><select id="nPista"></select>
+  <label>Cámaras</label><table id="nCams"></table>
+  <div id="nMsg" class="ayuda" style="color:#ff8a7a"></div>
+  <div class="barra" style="margin-top:12px;justify-content:flex-end"><button id="nCancel">Cancelar</button><button id="nCrear" class="prim">Crear y procesar</button></div>
+</div></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const v = $('v'), cv = $('tl'), cx = cv.getContext('2d');
+let S = null, slug = null, modo = 'edicion', cortes = [], palabras = [], trabajando = false;
+const mmss = s => `${Math.floor(s / 60)}:${(s % 60).toFixed(1).padStart(4, '0')}`;
+const msg = (t, ok) => { $('msg').textContent = t || ''; $('msg').style.color = ok ? 'var(--ok)' : '#ff8a7a'; };
+const api = async (url, body) => {
+  const r = await fetch(url, body === undefined ? { cache: 'no-store' } : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const d = await r.json(); if (!r.ok) throw new Error(d.error || r.status); return d;
+};
+
+// ---------- proyectos
+async function proyectos() {
+  const ps = await api('/api/proyectos');
+  $('proy').innerHTML = ps.length ? ps.map(p => `<option value="${esc(p.slug)}">${esc(p.slug)} · ${esc(p.toma)}</option>`).join('') : '<option value="">(sin proyectos)</option>';
+  const ult = (() => { try { return localStorage.getItem('estudio_proy') } catch (e) { return null } })();
+  slug = ps.find(p => p.slug === ult) ? ult : ps[0]?.slug || null;
+  if (slug) { $('proy').value = slug; await cargar(); }
+}
+$('proy').onchange = async () => { slug = $('proy').value; try { localStorage.setItem('estudio_proy', slug) } catch (e) {} ; S = null; await cargar(); };
+
+async function cargar() {
+  if (!slug) return;
+  const antes = S; S = await api('/api/p/' + slug);
+  if (S.proxy && (!antes || antes.proxy !== S.proxy || antes.cfg.slug !== S.cfg.slug)) { v.src = S.proxy; }
+  palabras = S.frases.flatMap(f => f.palabras);
+  armarCortes(); pintarTodo();
+}
+function armarCortes() {
+  cortes = S.edicion.cortes.filter(c => c.activo).map(c => [c.a, c.b]).sort((a, b) => a[0] - b[0]);
+  const m = []; for (const c of cortes) { if (m.length && c[0] <= m[m.length - 1][1]) m[m.length - 1][1] = Math.max(m[m.length - 1][1], c[1]); else m.push([...c]); }
+  cortes = m;
+}
+const cortado = t => cortes.some(c => t >= c[0] && t < c[1]);
+function aEdicion(t) { let r = t; for (const [a, b] of cortes) { if (b <= t) r -= b - a; else if (a < t) r -= t - a; } return r; }
+const duracionEd = () => aEdicion(S.cfg.duracion);
+
+// ---------- pintar
+function pintarTodo() { pintarPasos(); pintarTexto(); pintarCortes(); pintarTextos(); pintarVersiones(); pintarRenders(); dibujar(); }
+function pintarPasos() {
+  const p = S.estado.pasos || {};
+  $('pasos').innerHTML = ['voz', 'proxies', 'transcripcion', 'silencios'].map(k => `<span class="paso ${p[k]?.estado || ''}" title="${esc(p[k]?.detalle || '')}">${k}${p[k]?.estado === 'listo' ? ' ✓' : p[k]?.estado === 'corriendo' ? ' …' : p[k]?.estado === 'error' ? ' ✗' : ''}</span>`).join('') +
+    (['voz', 'proxies', 'transcripcion', 'silencios'].some(k => p[k]?.estado !== 'listo') && !trabajando ? ' <button id="bRepro">Procesar lo que falta</button>' : '');
+  const b = $('bRepro'); if (b) b.onclick = () => api(`/api/p/${slug}/procesar`, {}).then(vigilar).catch(e => msg(e.message));
+}
+function pintarTexto() {
+  const T = $('texto');
+  if (!S.frases.length) { T.innerHTML = '<p class="ayuda">Todavía no está la transcripción.</p>'; return; }
+  T.innerHTML = S.frases.map(f => `<p><span class="t">${mmss(f.a)}</span>` + f.palabras.map((w, i) => `<span data-s="${w.s}" data-e="${w.e}" class="${cortado((w.s + w.e) / 2) ? 'cut' : ''}">${esc(w.w)}</span>`).join(' ') + '</p>').join('');
+}
+function pintarCortes() {
+  const L = $('listaCortes'); const cs = [...S.edicion.cortes].sort((a, b) => a.a - b.a);
+  L.innerHTML = cs.length ? '' : '<p class="ayuda">Sin cortes todavía.</p>';
+  const tot = cortes.reduce((s, c) => s + c[1] - c[0], 0);
+  if (cs.length) L.insertAdjacentHTML('beforeend', `<p class="ayuda">${cs.filter(c => c.activo).length} cortes activos · ${tot.toFixed(1)} s menos · el video dura ${mmss(duracionEd())}</p>`);
+  cs.forEach(c => {
+    const d = document.createElement('div'); d.className = 'fila' + (c.activo ? '' : ' off');
+    d.innerHTML = `<input type="checkbox" ${c.activo ? 'checked' : ''} aria-label="Corte activo"><a href="#">${mmss(c.a)}</a><span class="tag">${c.tipo}</span><span>${(c.b - c.a).toFixed(1)} s</span>`;
+    d.querySelector('input').onchange = () => op({ op: 'alternar', id: c.id });
+    d.querySelector('a').onclick = e => { e.preventDefault(); ir(Math.max(0, c.a - 2), true); };
+    L.appendChild(d);
+  });
+}
+function pintarTextos() {
+  const L = $('listaTextos'); L.innerHTML = '';
+  S.edicion.textos.forEach(t => {
+    const d = document.createElement('div'); d.className = 'fila';
+    d.innerHTML = `<a href="#">${mmss(t.t)}</a><span><small class="tag">${esc(t.rotulo)}</small> ${esc(t.dato)}</span><button class="x" aria-label="Borrar cartel">✕</button>`;
+    d.querySelector('a').onclick = e => { e.preventDefault(); ir(t.t, true); };
+    d.querySelector('button').onclick = () => op({ op: 'borrar_texto', id: t.id });
+    L.appendChild(d);
+  });
+}
+function pintarVersiones() {
+  const L = $('listaVers'); L.innerHTML = '';
+  [...S.versiones].reverse().forEach(x => {
+    const d = document.createElement('div'); d.className = 'fila';
+    d.innerHTML = `<b>v${String(x.version).padStart(3, '0')}</b><span>${esc(x.nota || '')}</span><span class="x tag">${x.hora || ''}</span>`;
+    if (x.version !== S.edicion.version) { d.style.cursor = 'pointer'; d.onclick = () => op({ op: 'deshacer', version: x.version }); } else d.querySelector('b').style.color = 'var(--acc)';
+    L.appendChild(d);
+  });
+}
+function pintarRenders() {
+  const r = S.ultimo_render;
+  $('informe').innerHTML = r ? `Último: <b>${r.salida}</b> · ${mmss(r.duracion_s)} · ${r.planos} planos · promedio ${r.plano_promedio_s} s · el más largo ${r.plano_mas_largo_s} s` : '';
+  $('listaRenders').innerHTML = S.renders.map(x => `<div class="fila"><a href="#" data-u="${esc(x.url)}">${esc(x.nombre)}</a><span class="x tag">${x.hora}</span></div>`).join('');
+  $('listaRenders').querySelectorAll('a').forEach(a => a.onclick = e => { e.preventDefault(); $('reproRender').innerHTML = `<video src="${a.dataset.u}" controls style="width:100%;border-radius:6px"></video>`; });
+}
+function dibujar() {
+  const W = cv.width = cv.clientWidth * devicePixelRatio, H = cv.height = 70 * devicePixelRatio, D = S.cfg.duracion, X = t => t / D * W;
+  cx.clearRect(0, 0, W, H);
+  cx.fillStyle = '#2c3a2f'; cx.fillRect(0, H * .25, W, H * .5);
+  S.frases.forEach(f => { cx.fillStyle = '#3f6b4a'; cx.fillRect(X(f.a), H * .3, Math.max(1, X(f.b) - X(f.a)), H * .4); });
+  cx.fillStyle = 'rgba(12,12,14,.82)'; cortes.forEach(([a, b]) => cx.fillRect(X(a), 0, Math.max(1, X(b) - X(a)), H));
+  S.edicion.camaras.forEach(c => { cx.fillStyle = getComputedStyle(document.body).getPropertyValue('--cam-' + c.rol); cx.fillRect(X(c.a), H * .86, X(c.b) - X(c.a), H * .14); });
+  cx.fillStyle = '#ffc531'; S.edicion.textos.forEach(t => cx.fillRect(X(t.t), 0, Math.max(2, X(t.dur)), H * .14));
+  cx.fillStyle = '#fff'; cx.fillRect(X(v.currentTime || 0) - 1, 0, 2 * devicePixelRatio, H);
+}
+
+// ---------- reproducción: en modo edición salta los cortes
+function ir(t, siEstaCortado) { if (modo === 'edicion' && siEstaCortado) { const c = cortes.find(c => t >= c[0] && t < c[1]); if (c) t = c[1]; } v.currentTime = Math.max(0, t); }
+let ultPal = null;
+function cuadro() {
+  if (S) {
+    const t = v.currentTime;
+    if (modo === 'edicion' && !v.paused) { const c = cortes.find(c => t >= c[0] - 0.02 && t < c[1]); if (c) v.currentTime = c[1]; }
+    const tx = S.edicion.textos.find(x => t >= x.t && t < x.t + x.dur);
+    $('lt').style.display = tx ? 'block' : 'none'; if (tx) { $('lt').querySelector('small').textContent = tx.rotulo.toUpperCase(); $('lt').querySelector('b').textContent = tx.dato; }
+    const cam = S.edicion.camaras.find(c => t >= c.a && t < c.b); $('camtag').textContent = cam ? 'cámara: ' + cam.rol : ''; $('camtag').style.display = cam ? '' : 'none';
+    $('tc').innerHTML = `edición <b>${mmss(aEdicion(t))}</b> / ${mmss(duracionEd())} · toma ${mmss(t)}`;
+    const w = palabras.find(p => t >= p.s && t < p.e + 0.05);
+    if (w !== ultPal) { document.querySelectorAll('#texto span.now').forEach(s => s.classList.remove('now')); if (w) { const s = document.querySelector(`#texto span[data-s="${w.s}"]`); if (s) { s.classList.add('now'); if (!v.paused) s.scrollIntoView({ block: 'nearest' }); } } ultPal = w; }
+    dibujar();
+  }
+  requestAnimationFrame(cuadro);
+}
+requestAnimationFrame(cuadro);
+const play = () => v.paused ? (ir(v.currentTime, true), v.play()) : v.pause();
+$('bPlay').onclick = play; v.onplay = () => $('bPlay').textContent = '⏸'; v.onpause = () => $('bPlay').textContent = '▶';
+$('bAtras').onclick = () => ir(v.currentTime - 5, true); $('bAdel').onclick = () => ir(v.currentTime + 5, true);
+$('bModo').onclick = () => { modo = modo === 'edicion' ? 'original' : 'edicion'; $('bModo').textContent = 'Viendo: ' + (modo === 'edicion' ? 'edición' : 'toma entera'); };
+cv.onclick = e => { const r = cv.getBoundingClientRect(); ir((e.clientX - r.left) / r.width * S.cfg.duracion, true); };
+$('texto').onclick = e => { const s = e.target.closest('span[data-s]'); if (s && window.getSelection().isCollapsed) ir(+s.dataset.s - 0.05, false); };
+addEventListener('keydown', e => {
+  if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+  if (e.code === 'Space') { e.preventDefault(); play(); }
+  else if (e.key === 'ArrowLeft') ir(v.currentTime - 5, true); else if (e.key === 'ArrowRight') ir(v.currentTime + 5, true);
+  else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (S?.edicion.version > 1) op({ op: 'deshacer' }); }
+});
+
+// ---------- selección de palabras → cortar, volver a meter, cámara, cartel
+let selRango = null;
+document.addEventListener('selectionchange', () => {
+  const s = window.getSelection(); selRango = null;
+  if (s.rangeCount && !s.isCollapsed && $('texto').contains(s.anchorNode)) {
+    const spans = [...$('texto').querySelectorAll('span[data-s]')].filter(x => s.containsNode(x, true));
+    if (spans.length) {
+      const i0 = palabras.findIndex(p => p.s === +spans[0].dataset.s), i1 = palabras.findIndex(p => p.s === +spans[spans.length - 1].dataset.s);
+      const sig = palabras[i1 + 1], ant = palabras[i0 - 1];
+      // Whisper adelanta los finales: el corte llega hasta el inicio de la palabra que sigue (o 0,3 s de aire)
+      const a = Math.max(ant ? ant.e + 0.05 : 0, palabras[i0].s - 0.08), b = sig && sig.s - palabras[i1].e < 1.5 ? sig.s - 0.05 : palabras[i1].e + 0.3;
+      selRango = { a, b, txt: spans.map(x => x.textContent).join(' ') };
+    }
+  }
+  $('sel').style.display = selRango ? 'flex' : 'none';
+  if (selRango) $('selInfo').textContent = `«${selRango.txt.slice(0, 60)}${selRango.txt.length > 60 ? '…' : ''}» · ${mmss(selRango.a)}–${mmss(selRango.b)}`;
+});
+const conSel = f => () => { if (selRango) { const r = selRango; window.getSelection().removeAllRanges(); f(r); } };
+$('sCortar').onclick = conSel(r => op({ op: 'cortar', a: r.a, b: r.b, txt: r.txt }));
+$('sRest').onclick = conSel(r => op({ op: 'restaurar', a: r.a - 0.3, b: r.b + 0.3 }));
+document.querySelectorAll('#sel [data-cam]').forEach(b => b.onclick = conSel(r => op({ op: 'camara', a: r.a, b: r.b, rol: b.dataset.cam })));
+$('sCartel').onclick = conSel(r => { v.currentTime = r.a; tab('textos'); $('cDato').value = r.txt.slice(0, 70); $('cRot').focus(); });
+
+// ---------- operaciones
+async function op(o) {
+  try { const r = await api(`/api/p/${slug}/op`, o); S.edicion = r.edicion; await cargar(); msg(r.edicion.nota ? `v${String(r.edicion.version).padStart(3, '0')} · ${r.edicion.nota}` : '', true); }
+  catch (e) { msg(e.message); }
+}
+$('bSil').onclick = () => op({ op: 'silencios', minimo: +$('silMin').value });
+$('bCartel').onclick = () => { if (!$('cDato').value.trim()) return msg('Falta el dato del cartel'); op({ op: 'texto', t: v.currentTime, dur: +$('cDur').value, rotulo: $('cRot').value, dato: $('cDato').value }).then(() => { $('cRot').value = ''; $('cDato').value = ''; }); };
+function tab(n) { document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.p === n)); document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === 'p-' + n)); }
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => tab(b.dataset.p));
+
+// ---------- procesos pesados
+async function render(calidad) { try { await api(`/api/p/${slug}/render`, { calidad }); vigilar(); } catch (e) { msg(e.message); } }
+$('bR360').onclick = () => render('360'); $('bR1080').onclick = () => render('1080');
+let vigilando = null;
+async function vigilar() {
+  clearTimeout(vigilando);
+  const t = await api('/api/trabajo'); trabajando = !!t.que;
+  $('trabajo').textContent = t.que ? `${t.que} · ${t.slug} · ${t.log || '…'} · ${t.segundos} s` : t.error ? 'Error: ' + t.error : '';
+  $('trabajo').style.color = t.error && !t.que ? '#ff8a7a' : 'var(--acc)';
+  if (slug) await cargar();
+  if (t.que) vigilando = setTimeout(vigilar, 1500); else if (t.log === 'listo') msg('Listo', true);
+}
+
+// ---------- nuevo video
+$('bNuevo').onclick = async () => {
+  $('nuevo').style.display = 'flex'; $('nMsg').textContent = '';
+  const ts = await api('/api/tomas');
+  $('nToma').innerHTML = ts.length ? ts.map(t => `<option value="${esc(t.toma)}">${esc(t.toma)} · ${Object.keys(t.camaras).length} cámaras · ${t.mb} MB</option>`).join('') : '<option value="">(no hay tomas en la carpeta de grabaciones)</option>';
+  if (ts.length) elegirToma();
+};
+$('nCancel').onclick = () => $('nuevo').style.display = 'none';
+$('nToma').onchange = elegirToma;
+async function elegirToma() {
+  const t = await api('/api/toma/' + encodeURIComponent($('nToma').value));
+  $('nInfo').textContent = `Dura ${mmss(t.duracion)} · ${t.pistas.length} pistas de audio`;
+  $('nPista').innerHTML = t.pistas.map(p => `<option value="${p}">pista ${p + 1}${p === t.pistas.length - 1 ? ' (la última: suele ser el micrófono crudo)' : ''}</option>`).join('');
+  $('nPista').value = t.pistas[t.pistas.length - 1];
+  $('nCams').innerHTML = Object.keys(t.camaras).map(n => `<tr><td>${esc(n)}</td><td><select data-cam="${esc(n)}"><option value="cara">cara</option><option value="producto" ${/cenital|top|mesa/i.test(n) ? 'selected' : ''}>producto</option></select></td><td><label style="margin:0;color:var(--tx)"><input type="checkbox" data-girar="${esc(n)}" ${/cenital/i.test(n) ? 'checked' : ''}> dar vuelta</label></td></tr>`).join('') || '<tr><td class="ayuda">Sin cámaras ISO: se usa solo el programa.</td></tr>';
+}
+$('nCrear').onclick = async () => {
+  const roles = {}, girar = [];
+  document.querySelectorAll('#nCams [data-cam]').forEach(s => roles[s.dataset.cam] = s.value);
+  document.querySelectorAll('#nCams [data-girar]').forEach(c => { if (c.checked) girar.push(c.dataset.girar); });
+  try {
+    const r = await api('/api/crear', { toma: $('nToma').value, slug: $('nSlug').value.trim(), pista_voz: +$('nPista').value, roles, girar });
+    $('nuevo').style.display = 'none'; try { localStorage.setItem('estudio_proy', r.slug) } catch (e) {}
+    await proyectos(); vigilar();
+  } catch (e) { $('nMsg').textContent = e.message; }
+};
+
+proyectos().then(vigilar).catch(e => msg(e.message));
+addEventListener('resize', () => S && dibujar());
+</script>
+</body>
+</html>

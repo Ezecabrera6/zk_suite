@@ -1,0 +1,469 @@
+{
+ "_comentario": "Ejemplo de proyecto.json para render/editar.py, render/shorts.py y subtitulos/subtitulos.py. Copialo a <video>/12_project/ y cambiá los valores. Los tiempos son segundos de la toma o de la narración.",
+ "proyecto": "C:/ruta/a/mi_video",
+ "slug": "mi_video",
+ "version": "v001",
+ "toma": "01_main/toma.mp4",
+ "transcripcion": "transcript_toma.json",
+ "narraciones": {
+  "t1": "07_narraciones/narraciones_tanda1.mp4",
+  "t2": "07_narraciones/narraciones_tanda2.mp4"
+ },
+ "transcripciones_narraciones": {
+  "t1": "transcript_narr_t1.json",
+  "t2": "transcript_narr_t2.json"
+ },
+ "fotos": "06_material_usuario/fotos",
+ "miniatura": "11_exports/miniatura.jpg",
+ "miniaturas_otros": "10_work/mi_video/thumbs",
+ "musica_vol": {
+  "gancho": 0.1,
+  "logo": 0.35,
+  "cuerpo": 0.045,
+  "outro": 0.3
+ },
+ "gancho": {
+  "narr": "t2",
+  "desde": 1.36,
+  "hasta": 5.46,
+  "plano": 99.0
+ },
+ "keep": [
+  [
+   2.68,
+   18.78
+  ],
+  [
+   35.04,
+   53.58
+  ],
+  [
+   55.2,
+   62.28
+  ],
+  [
+   70.02,
+   92.92
+  ],
+  [
+   95.26,
+   111.46
+  ],
+  [
+   116.38,
+   172.92
+  ],
+  [
+   173.28,
+   216.42
+  ],
+  [
+   221.32,
+   226.2
+  ],
+  "FOTOS",
+  [
+   255.75,
+   287.54
+  ],
+  [
+   289.08,
+   331.12
+  ],
+  [
+   346.28,
+   383.3
+  ],
+  [
+   392.72,
+   419.72
+  ],
+  [
+   425.58,
+   436.78
+  ],
+  [
+   441.58,
+   447.68
+  ],
+  [
+   447.68,
+   452.38
+  ],
+  [
+   454.84,
+   476.2
+  ]
+ ],
+ "fotos_vo": [
+  {
+   "img": "foto_01.jpg",
+   "narr": "t1",
+   "desde": 29.34,
+   "hasta": 34.3,
+   "rotulo": "De día · HDR"
+  },
+  {
+   "img": "foto_02.jpg",
+   "narr": "t1",
+   "desde": 20.58,
+   "hasta": 24.58,
+   "rotulo": "Interior · luz artificial"
+  },
+  {
+   "img": "foto_03.jpg",
+   "narr": "t1",
+   "desde": 13.3,
+   "hasta": 17.84,
+   "rotulo": "Noche · ISO 8846"
+  }
+ ],
+ "graficos": [
+  {
+   "t": 95.26,
+   "dur": 3.2,
+   "tipo": "sec",
+   "c": [
+    "01",
+    "Diseño"
+   ]
+  },
+  {
+   "t": 152.48,
+   "dur": 3.2,
+   "tipo": "sec",
+   "c": [
+    "02",
+    "Pantalla"
+   ]
+  },
+  {
+   "t": 164.0,
+   "dur": 6.0,
+   "tipo": "dato",
+   "c": [
+    "144 Hz",
+    "contra 120 Hz del Edge 60 Pro"
+   ]
+  },
+  {
+   "t": 181.2,
+   "dur": 3.2,
+   "tipo": "sec",
+   "c": [
+    "03",
+    "Batería"
+   ]
+  },
+  {
+   "t": 203.3,
+   "dur": 7.0,
+   "tipo": "dato",
+   "c": [
+    "90 W",
+    "cargador en la caja · 2 min y pasás el 40 %"
+   ]
+  },
+  {
+   "t": 225.22,
+   "dur": 2.6,
+   "tipo": "sec",
+   "c": [
+    "04",
+    "Cámara"
+   ]
+  },
+  {
+   "t": 256.3,
+   "dur": 5.0,
+   "tipo": "dato",
+   "c": [
+    "Zoom",
+    "lo mejor de la cámara"
+   ]
+  },
+  {
+   "t": 275.8,
+   "dur": 4.0,
+   "tipo": "dato",
+   "c": [
+    "Micrófono",
+    "bastante mejor que el 60 Pro"
+   ]
+  },
+  {
+   "t": 289.08,
+   "dur": 3.2,
+   "tipo": "sec",
+   "c": [
+    "05",
+    "Contras"
+   ]
+  },
+  {
+   "t": 293.0,
+   "dur": 7.0,
+   "tipo": "dato",
+   "c": [
+    "Apps preinstaladas",
+    "juegos, TikTok y más, sin pedirlas"
+   ]
+  },
+  {
+   "t": 316.5,
+   "dur": 5.0,
+   "tipo": "dato",
+   "c": [
+    "Temperatura",
+    "algo de calor al cargar, menos que el 60 Pro"
+   ]
+  },
+  {
+   "t": 322.6,
+   "dur": 4.0,
+   "tipo": "dato",
+   "c": [
+    "Peso",
+    "un poco más, se nota en la mano"
+   ]
+  },
+  {
+   "t": 346.3,
+   "dur": 9.0,
+   "tipo": "resumen",
+   "c": {
+    "bueno": [
+     "Zoom que enfoca muy lejos",
+     "Micrófono mejor",
+     "Carga de 90 W",
+     "Brillo al sol",
+     "Cero bugs en un mes"
+    ],
+    "malo": [
+     "Apps que no pedí",
+     "Poca luz de noche",
+     "Pesa un poco más",
+     "Módulo de cámara enorme"
+    ]
+   }
+  },
+  {
+   "t": 359.24,
+   "dur": 3.0,
+   "tipo": "sec",
+   "c": [
+    "06",
+    "¿Vale la pena?"
+   ]
+  },
+  {
+   "t": 363.3,
+   "dur": 13.0,
+   "tipo": "precio",
+   "c": [
+    [
+     "Edge 70 Pro",
+     "$1.400.000 – $1.500.000"
+    ],
+    [
+     "Edge 60 Pro",
+     "$1.100.000 cuando lo compré"
+    ]
+   ]
+  },
+  {
+   "t": 394.9,
+   "dur": 22.0,
+   "tipo": "veredicto",
+   "c": [
+    [
+     "¿Tenés el Edge 60 Pro?",
+     "No te cambies"
+    ],
+    [
+     "¿Venís del 50, el 40 o algo más básico?",
+     "Muy buena compra"
+    ],
+    [
+     "¿No grabás ni sacás muchas fotos?",
+     "Andá por el 60 Pro"
+    ]
+   ]
+  },
+  {
+   "t": 442.6,
+   "dur": 6.2,
+   "tipo": "mini",
+   "c": [
+    "video_anterior_0.jpg",
+    "Unboxing del Edge 60 Pro",
+    0
+   ]
+  },
+  {
+   "t": 445.5,
+   "dur": 3.3,
+   "tipo": "mini",
+   "c": [
+    "video_anterior_1.jpg",
+    "Cambié el 60 Pro por el 70 Pro",
+    1
+   ]
+  }
+ ],
+ "correcciones_subtitulos": {
+  "tamalea": "tambalea",
+  "buggeó": "bugueó"
+ },
+ "shorts": [
+  {
+   "slug": "01_carga_90w",
+   "titulo": "EDGE 70 PRO · 30 DÍAS",
+   "parte": "1/4",
+   "gancho_texto": [
+    "2 MINUTOS",
+    "= 40 %"
+   ],
+   "claves": [
+    "40%",
+    "90",
+    "batería",
+    "minutos",
+    "rapidísimo"
+   ],
+   "titulo_youtube": "Título del Short 1 #shorts",
+   "escenas": [
+    [
+     "CAM",
+     "toma",
+     206.8,
+     211.1,
+     {
+      "z": 1.25
+     }
+    ],
+    [
+     "CAM",
+     "toma",
+     182.9,
+     185.05,
+     {}
+    ],
+    [
+     "BROLL",
+     "toma",
+     185.0,
+     191.6,
+     {
+      "va": 99.0,
+      "cx": 470
+     }
+    ],
+    [
+     "CAM",
+     "toma",
+     191.58,
+     195.6,
+     {}
+    ],
+    [
+     "CAM",
+     "toma",
+     196.2,
+     199.35,
+     {
+      "z": 1.18
+     }
+    ],
+    [
+     "BROLL",
+     "toma",
+     200.05,
+     206.85,
+     {
+      "va": 116.6,
+      "cx": 470
+     }
+    ],
+    [
+     "CAM",
+     "toma",
+     206.85,
+     212.35,
+     {
+      "z": 1.25
+     }
+    ]
+   ]
+  },
+  {
+   "slug": "03_fotos_noche_dia",
+   "titulo": "EDGE 70 PRO · CÁMARA",
+   "parte": "3/4",
+   "gancho_texto": [
+    "DE NOCHE",
+    "LE CUESTA"
+   ],
+   "claves": [
+    "60",
+    "día",
+    "noche",
+    "ruido",
+    "sol"
+   ],
+   "titulo_youtube": "Título del Short 2 #shorts",
+   "escenas": [
+    [
+     "FOTO",
+     "t1",
+     13.25,
+     17.9,
+     {
+      "img": "foto_03.jpg",
+      "lab": "Noche"
+     }
+    ],
+    [
+     "FOTO",
+     "t1",
+     29.3,
+     34.35,
+     {
+      "img": "foto_01.jpg",
+      "lab": "Día"
+     }
+    ],
+    [
+     "FOTO",
+     "t1",
+     20.55,
+     24.65,
+     {
+      "img": "foto_02.jpg",
+      "lab": "Interior"
+     }
+    ],
+    [
+     "BROLL",
+     "toma",
+     251.15,
+     255.6,
+     {
+      "va": 116.6,
+      "cx": 470
+     }
+    ],
+    [
+     "FOTO",
+     "t1",
+     37.15,
+     43.05,
+     {
+      "img": "foto_04.jpg",
+      "lab": "Noche"
+     }
+    ]
+   ]
+  }
+ ]
+}

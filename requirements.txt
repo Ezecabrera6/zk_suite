@@ -1,0 +1,5 @@
+# Además: ffmpeg 6+ en el PATH (con libx264; h264_nvenc para los renders de ejemplos/)
+numpy>=1.26
+Pillow>=10.0
+faster-whisper>=1.0     # transcripción y controles
+scipy>=1.11             # solo graficos/zk_style.py

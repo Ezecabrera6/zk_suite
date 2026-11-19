@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Previews</title>
+<style>
+  :root { --bg:#0e0f12; --panel:#17191e; --txt:#e8e8ea; --sub:#9a9ca3; --acento:#FFC531; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font:15px/1.4 Bahnschrift, "Segoe UI", sans-serif; }
+  header { display:flex; align-items:center; gap:12px; padding:10px 16px; background:var(--panel); }
+  header h1 { font-size:17px; margin:0; font-weight:600; }
+  #aviso { margin-left:auto; color:var(--acento); font-weight:600; display:none; cursor:pointer; }
+  main { display:grid; grid-template-columns:1fr 300px; gap:12px; padding:12px 16px; }
+  video { width:100%; max-height:calc(100vh - 230px); background:#000; border-radius:6px; }
+  #info { color:var(--sub); margin-top:6px; }
+  #nota { margin-top:8px; display:flex; gap:8px; align-items:flex-start; }
+  #nota b { color:var(--acento); padding-top:8px; min-width:44px; }
+  #txt { flex:1; background:var(--panel); color:var(--txt); border:1px solid #2a2d34; border-radius:6px; padding:8px; font:inherit; resize:vertical; }
+  button { background:var(--panel); color:var(--txt); border:1px solid #2a2d34; border-radius:6px; padding:8px 10px; font:inherit; cursor:pointer; }
+  button.prim { background:var(--acento); color:#111; border-color:var(--acento); font-weight:600; }
+  button:disabled { opacity:.4; cursor:default; }
+  aside { display:flex; flex-direction:column; gap:12px; }
+  aside h2 { font-size:14px; margin:0; color:var(--sub); font-weight:600; }
+  #lista, #coms { display:flex; flex-direction:column; gap:6px; }
+  #lista button { text-align:left; border-color:transparent; }
+  #lista button.act { border-color:var(--acento); }
+  #lista small { color:var(--sub); display:block; }
+  .com { display:flex; gap:6px; background:var(--panel); border-radius:6px; padding:6px 8px; }
+  .com a { color:var(--acento); cursor:pointer; text-decoration:none; font-weight:600; }
+  .com span { flex:1; white-space:pre-wrap; }
+  .com button { padding:0 6px; border:0; color:var(--sub); }
+  #estado { color:var(--acento); }
+  @media (max-width:800px) { main { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Previews</h1>
+  <span id="aviso">Hay una versión nueva: tocá para verla</span>
+</header>
+<main>
+  <div>
+    <video id="v" controls preload="metadata"></video>
+    <div id="info">Cargando…</div>
+    <div id="nota" hidden>
+      <b id="tnota">0:00</b>
+      <textarea id="txt" rows="2" placeholder="Pausaste acá: ¿qué cambio? (Enter agrega, Shift+Enter baja de línea)"></textarea>
+      <button id="agregar">Agregar</button>
+    </div>
+  </div>
+  <aside>
+    <h2>Comentarios</h2>
+    <div id="coms"></div>
+    <button id="enviar" class="prim" disabled>Enviar a corregir</button>
+    <div id="estado"></div>
+    <h2>Versiones</h2>
+    <div id="lista"></div>
+  </aside>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const v = $('v'), lista = $('lista'), info = $('info'), aviso = $('aviso');
+let vistas = [], actual = null, siguiendo = true, coms = [], tPausa = 0;
+const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+// borrador por si se recarga la página (solo comodidad; lo que vale es lo enviado)
+try { coms = JSON.parse(localStorage.getItem('visor_coms') || '[]').filter(c => c.v); } catch (e) {}
+const guardar = () => { try { localStorage.setItem('visor_coms', JSON.stringify(coms)); } catch (e) {} };
+
+function pintarComs() {
+  $('coms').innerHTML = '';
+  coms.sort((a, b) => a.v.localeCompare(b.v) || a.t - b.t).forEach((c, i) => {
+    const d = document.createElement('div'); d.className = 'com';
+    d.innerHTML = `<a title="Ir a ese momento de esa versión">${c.v} · ${mmss(c.t)}</a><span></span><button title="Borrar">✕</button>`;
+    d.querySelector('span').textContent = c.texto;
+    d.querySelector('a').onclick = () => {   // cada comentario va atado a la versión sobre la que se hizo
+      const p = vistas.find(x => x.nombre === c.v);
+      if (p && c.v !== actual) { abrir(p, p === vistas[0]); v.addEventListener('loadedmetadata', () => { v.currentTime = c.t; }, { once: true }); }
+      else v.currentTime = c.t;
+    };
+    d.querySelector('button').onclick = () => { coms.splice(i, 1); guardar(); pintarComs(); };
+    $('coms').appendChild(d);
+  });
+  $('enviar').disabled = !coms.length;
+}
+v.addEventListener('pause', () => { tPausa = v.currentTime; $('tnota').textContent = mmss(tPausa); $('nota').hidden = false; $('txt').focus(); });
+v.addEventListener('play', () => { if (!$('txt').value.trim()) $('nota').hidden = true; });
+function agregar() {
+  const texto = $('txt').value.trim(); if (!texto) return;
+  coms.push({ v: actual, t: Math.round(tPausa * 10) / 10, texto }); $('txt').value = ''; guardar(); pintarComs();
+}
+$('agregar').onclick = agregar;
+$('txt').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); agregar(); } });
+$('enviar').onclick = async () => {
+  $('enviar').disabled = true;
+  try {
+    const r = await fetch('/enviar', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ version: [...new Set(coms.map(c => c.v))].join('+'),
+                             comentarios: coms.map(c => ({ version: c.v, t: c.t, mmss: mmss(c.t), texto: c.texto })) }) });
+    if (!r.ok) throw new Error(r.status);
+    $('estado').textContent = `Enviado (${coms.length}). Claude está corrigiendo: la versión nueva aparece sola acá.`;
+    coms = []; guardar(); pintarComs();
+  } catch (e) { $('estado').textContent = 'No se pudo enviar: el servidor del visor no responde.'; $('enviar').disabled = false; }
+};
+
+function abrir(p, seguir) {
+  actual = p.nombre; siguiendo = seguir;
+  v.src = p.url + '?t=' + Date.now(); v.load();
+  info.textContent = `${p.nombre} · ${p.hora} · ${p.mb} MB` + (seguir ? ' · la más nueva' : '');
+  aviso.style.display = 'none'; pintar();
+}
+function pintar() {
+  lista.innerHTML = '';
+  vistas.forEach((p, i) => {
+    const b = document.createElement('button');
+    b.className = p.nombre === actual ? 'act' : '';
+    b.innerHTML = `${p.nombre}${i === 0 ? ' · última' : ''}<small>${p.hora} · ${p.mb} MB</small>`;
+    b.onclick = () => abrir(p, i === 0);
+    lista.appendChild(b);
+  });
+}
+async function mirar() {
+  try {
+    const r = await fetch('/lista', { cache: 'no-store' }); const nuevas = await r.json();
+    const habia = vistas[0] && vistas[0].nombre; vistas = nuevas;
+    if (!vistas.length) { info.textContent = 'Todavía no hay previews: se está renderizando la primera.'; return; }
+    if (!actual) abrir(vistas[0], true);
+    else if (vistas[0].nombre !== habia) {
+      // salta sola solo si estaba en la última, en pausa y sin comentario a medio escribir
+      if (siguiendo && v.paused && !$('txt').value.trim()) { abrir(vistas[0], true); $('estado').textContent = ''; }
+      else aviso.style.display = 'inline';
+    }
+    pintar();
+  } catch (e) { info.textContent = 'El servidor del visor no responde.'; }
+}
+aviso.onclick = () => abrir(vistas[0], true);
+pintarComs(); mirar(); setInterval(mirar, 4000);
+</script>
+</body>
+</html>

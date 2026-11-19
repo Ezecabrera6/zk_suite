@@ -1,0 +1,16 @@
+[
+ ["lt_precio", "PRECIO", "$81.019 en Mercado Libre", 3.5],
+ ["lt_modelo", "MODELO", "Redragon King Ultra M999", 3.5],
+ ["lt_dpi", "SENSOR", "45.000 DPI • Redragon 3953", 3.5],
+ ["lt_nopubli", "ACLARACIÓN", "lo compré yo, no es publicidad", 3.5],
+ ["lt_fizz", "VIDEO EN EL CANAL", "Redragon Fizz Pro, el teclado", 4.0],
+ ["lt_peso", "PESO", "54 g", 3.0],
+ ["lt_invitado", "INVITADO ESPECIAL", "no estaba en el guion", 3.0],
+ ["lt_modos", "CONEXIÓN", "2.4G • Bluetooth • cable", 3.5],
+ ["lt_ips", "750 IPS", "lo podés mover a 19 m/s sin que se pierda", 4.0],
+ ["lt_hz", "1.000 Hz", "le avisa a la PC 1.000 veces por segundo", 3.5],
+ ["lt_bateria", "BATERÍA", "hasta 80 h", 3.0],
+ ["lt_malo", "LO MALO", "la base va con cable y el mouse se mueve", 4.0],
+ ["lt_gato", "INVITADO", "el gato", 2.5],
+ ["lt_botones", "BOTONES", "6 • dos laterales + DPI", 3.0]
+]

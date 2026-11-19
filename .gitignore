@@ -1,0 +1,40 @@
+# Medios: nunca al repo
+*.mp4
+*.mov
+*.mkv
+*.wav
+*.mp3
+*.m4a
+*.aac
+*.flac
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.npy
+*.ttf
+*.otf
+# Datos de cada video: transcripciones, cortes, correcciones, logs
+tx_*.txt
+transcript*.json
+words.json
+edl.json
+edl_multicam.json
+plan.json
+correcciones/
+visor_correcciones/
+*.srt
+*.vtt
+*.ass
+edl_copias/
+analysis/
+*.log
+*.err
+BITACORA*.md
+# Entorno
+.env
+__pycache__/
+*.pyc
+assets/
+proyectos/
+grabaciones/

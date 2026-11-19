@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Preview en vivo</title>
+<style>
+:root{--bg:#0b0c0f;--pn:#15171c;--ln:#2a2e36;--tx:#eef0f2;--dim:#8a909a;--acc:#ffc531}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:14px "Segoe UI",system-ui,sans-serif}
+#w{display:flex;flex-direction:column;height:100vh;padding:8px;gap:8px}
+#marco{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+#stage{position:relative;aspect-ratio:16/9;height:100%;max-width:100%;background:#000;overflow:hidden;border-radius:8px}
+#stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;visibility:hidden}
+#stage video.vis{visibility:visible}
+#stage img.g{position:absolute;inset:0;width:100%;height:100%;opacity:0;transform:translateY(12px);transition:opacity .18s,transform .18s;pointer-events:none}
+#stage img.g.on{opacity:1;transform:none}
+#ctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--pn);border-radius:8px;padding:8px}
+button{background:#22262e;color:var(--tx);border:1px solid var(--ln);border-radius:8px;padding:7px 12px;font:inherit;font-weight:700;cursor:pointer}
+button:hover{border-color:var(--acc)}
+#scrub{flex:1;min-width:200px;accent-color:var(--acc)}
+#tc{font-variant-numeric:tabular-nums;min-width:330px;font-size:15px}#tc b{color:var(--acc)}#info,#estado{color:var(--dim);font-size:13px}
+a{color:var(--acc)}
+</style></head><body><div id="w">
+<div id="marco"><div id="stage"></div></div>
+<div id="ctl">
+  <button id="bPlay">▶ Play</button><button id="bVel">Velocidad ×4</button><input id="scrub" type="range" min="0" max="1" step="0.05" value="0"><span id="tc">0:00 / 0:00</span>
+  <button id="bAct">⟳ Actualizar con el corte del visor</button><a href="./" target="_blank">abrir el visor</a>
+  <div id="info" style="width:100%"></div><div id="estado"></div>
+</div></div>
+<script>
+const st=document.getElementById('stage');
+let P=null, t=0, playing=false, tRef=0, tBase=0, cur=-1, ctx=null, master=null, pool={}, apool={}, bufs={}, firedSfx=new Set();
+// velocidad (pedido 10/11: «necesito editarlo viéndolo en ×2»): por defecto ×2, se recuerda en este navegador
+let vel=4;try{vel=+localStorage.getItem('fizz_vel4')||4}catch(e){}   // pedido 10/11: «velocidad ×4»
+function aplicarVel(){Object.values(pool).forEach(v=>{v.playbackRate=vel;v.preservesPitch=true});Object.values(apool).forEach(e=>{e.a.playbackRate=vel;e.a.preservesPitch=true});
+  const b=document.getElementById('bVel');if(b)b.textContent='Velocidad ×'+String(vel).replace('.',',')}
+function cambiarVel(){tBase=t;tRef=performance.now();vel=vel===1?1.5:vel===1.5?2:vel===2?3:vel===3?4:1;try{localStorage.setItem('fizz_vel4',vel)}catch(e){}aplicarVel()}
+const fmt=x=>{x=Math.max(0,x);return Math.floor(x/60)+':'+String(Math.floor(x%60)).padStart(2,'0')};
+// pedido 10/11: «si me ponés milisegundos en el editor yo te digo exacto»
+const fms=x=>{x=Math.max(0,x);return Math.floor(x/60)+':'+(x%60).toFixed(3).padStart(6,'0')};
+
+function vEl(url,slot){const k=url+'#'+slot;if(!pool[k]){const v=document.createElement('video');v.src=url;v.preload='auto';v.playsInline=true;
+  v.muted=!/\/(logo|outro)\.mp4$/.test(url);v.playbackRate=vel;v.preservesPitch=true;st.insertBefore(v,st.querySelector('img.g'));pool[k]=v}return pool[k]}
+function slotDe(k){let s=0;for(let j=k-1;j>=0&&P.piezas[j].url===P.piezas[k].url;j--)s^=1;return k%2}  // dos copias por fuente: alternan
+function estilo(v,p){if(p.esc){v.style.transformOrigin=p.esc[1]+'% '+p.esc[2]+'%';v.style.transform='scale('+p.esc[0]+')'}else{v.style.transform='none'}}
+function idx(tt){let lo=0,hi=P.piezas.length-1;while(lo<hi){const m=(lo+hi+1)>>1;if(P.piezas[m].t<=tt)lo=m;else hi=m-1}return lo}
+function preparar(k){const p=P.piezas[k];if(!p)return;const v=vEl(p.url,k%2);if(v.dataset.k!=k){v.dataset.k=k;try{v.currentTime=p.ss}catch(e){}v.pause()}}
+
+// ---- audio: voz procesada y pista cruda, con la ganancia del render y un limitador; efectos como búferes
+function audioInit(){if(ctx)return;ctx=new AudioContext();const lim=ctx.createDynamicsCompressor();lim.threshold.value=-2;lim.knee.value=0;lim.ratio.value=20;lim.attack.value=0.002;lim.release.value=0.08;
+  master=ctx.createGain();master.gain.value=P.gan_total;master.connect(lim);lim.connect(ctx.destination);
+  P.sfx.forEach(s=>{if(!bufs[s.url])bufs[s.url]=fetch(s.url).then(r=>r.arrayBuffer()).then(b=>ctx.decodeAudioData(b)).catch(()=>null)})}
+function aEl(url,slot){const k=url+'#'+slot;if(!apool[k]){const a=new Audio(url);a.preload='auto';a.playbackRate=vel;a.preservesPitch=true;const g=ctx.createGain();ctx.createMediaElementSource(a).connect(g);g.connect(master);apool[k]={a,g,item:-1}}return apool[k]}
+function audioTick(){if(!ctx)return;const urls=[...new Set(P.audio.map(x=>x.url))];
+  for(const u of urls){let act=-1;P.audio.forEach((x,i)=>{if(x.url===u&&x.t<=t&&t<x.t+x.d)act=i});
+    for(const s of [0,1]){const e=apool[u+'#'+s];if(e&&e.item!==act&&!e.a.paused&&(act<0||e!==aEl(u,act%2)))e.a.pause()}
+    if(act<0)continue;const it=P.audio[act],e=aEl(u,act%2),want=it.desde+(t-it.t);
+    if(e.item!==act){e.item=act;e.g.gain.value=it.gan;e.a.currentTime=want}
+    if(playing&&e.a.paused)e.a.play().catch(()=>{});if(!playing&&!e.a.paused)e.a.pause();
+    if(e.a.playbackRate!==vel)e.a.playbackRate=vel;
+    if(Math.abs(e.a.currentTime-want)>0.15*vel)e.a.currentTime=want;
+    // pre-carga el próximo tramo de esta fuente en la otra copia
+    const nx=P.audio.findIndex((x,i)=>i>act&&x.url===u);if(nx>=0&&P.audio[nx].t-t<0.8){const e2=aEl(u,nx%2);if(e2.item!==nx){e2.item=nx;e2.g.gain.value=P.audio[nx].gan;e2.a.currentTime=P.audio[nx].desde}}}}
+function sfxTick(prev){if(!ctx||!playing)return;P.sfx.forEach((s,i)=>{if(!firedSfx.has(i)&&s.t>prev-0.05&&s.t<=t){firedSfx.add(i);bufs[s.url]&&bufs[s.url].then(b=>{if(!b)return;
+  const src=ctx.createBufferSource(),g=ctx.createGain();src.buffer=b;g.gain.value=s.gan;src.connect(g);g.connect(master);src.start()})}})}
+
+// ---- bucle
+let prevT=0;
+function tick(){if(!P){requestAnimationFrame(tick);return}
+  if(playing){t=tBase+(performance.now()-tRef)/1000*vel;if(t>=P.duracion){t=P.duracion;pausar()}}
+  const k=idx(t);
+  if(k!==cur){const p=P.piezas[k],v=vEl(p.url,k%2);estilo(v,p);if(v.dataset.k!=k){v.dataset.k=k;try{v.currentTime=p.ss+(t-p.t)}catch(e){}}cur=k;
+    info.textContent=`plano ${k+1} de ${P.piezas.length} · ${p.tipo}${p.tipo==='broll'?' · '+p.url.split('/').pop():' · toma '+fmt(p.ss)}`}
+  const p=P.piezas[cur],v=vEl(p.url,cur%2),want=p.ss+(t-p.t);
+  // pedido 10/11: «hay momentos de pantallas en negro». El plano nuevo se muestra recién cuando tiene su cuadro listo;
+  // hasta entonces queda el anterior en pantalla (nunca un video vacío).
+  if(!v.classList.contains('vis')&&v.readyState>=2&&!v.seeking){
+    st.querySelectorAll('video.vis').forEach(o=>{if(o!==v){o.classList.remove('vis');o.pause()}});v.classList.add('vis')}
+  if(v.playbackRate!==vel)v.playbackRate=vel;
+  if(playing&&v.paused)v.play().catch(()=>{});if(!playing&&!v.paused)v.pause();
+  if(Math.abs(v.currentTime-want)>(playing?0.25*vel:0.05))v.currentTime=want;
+  if(P.piezas[cur+1]&&P.piezas[cur+1].t-t<2.0*Math.max(1,vel/2))preparar(cur+1);   // más anticipación a ×3/×4
+  st.querySelectorAll('img.g').forEach(im=>{const g=P.graficos[+im.dataset.i];im.classList.toggle('on',g.t<=t&&t<g.t+g.d)});
+  audioTick();sfxTick(prevT);prevT=t;
+  const pp=P.piezas[cur],enToma=pp&&pp.tipo!=='broll'&&pp.tipo!=='outro'&&pp.tipo!=='logo'?pp.ss+(t-pp.t):null;
+  scrub.value=t;tc.innerHTML=`<b>video ${fms(t)}</b> / ${fmt(P.duracion)}`+(enToma!==null?` · toma ${fms(enToma)}`:` · ${pp?pp.tipo:''}`);requestAnimationFrame(tick)}
+function play(){audioInit();ctx.resume();playing=true;tBase=t;tRef=performance.now();bPlay.textContent='⏸ Pausa'}
+function pausar(){playing=false;bPlay.textContent='▶ Play';Object.values(apool).forEach(e=>e.a.pause());st.querySelectorAll('video').forEach(v=>v.pause())}
+function ir(x){const was=playing;pausar();t=Math.max(0,Math.min(P.duracion,x));cur=-1;firedSfx=new Set(P.sfx.map((s,i)=>s.t<=t?i:-1).filter(i=>i>=0));
+  Object.values(apool).forEach(e=>e.item=-1);prevT=t;if(was)play()}
+
+async function cargarPlan(){P=await (await fetch('plan.json',{cache:'no-store'})).json();
+  st.querySelectorAll('img.g').forEach(i=>i.remove());P.graficos.forEach((g,i)=>{const im=new Image();im.src=g.png;im.className='g';im.dataset.i=i;st.appendChild(im)});
+  scrub.max=P.duracion;cur=-1;
+  P.piezas.forEach((p,k)=>{if(p.tipo==='broll'||p.tipo==='logo'||p.tipo==='outro')preparar(k)});   // precarga lo que no es de las cámaras
+  estado.textContent=`Plan ${P.version}: ${fmt(P.duracion)} · ${P.piezas.length} planos · ${P.graficos.length} gráficos`+(P.faltan&&P.faltan.length?` · sin ancla: ${P.faltan.map(f=>f[0]).join(', ')}`:'')}
+bPlay.onclick=()=>playing?pausar():play();
+bVel.onclick=cambiarVel;aplicarVel();
+scrub.oninput=()=>ir(+scrub.value);
+bAct.onclick=async()=>{const was=playing,tt=t;pausar();estado.textContent='Actualizando con el corte del visor…';
+  const r=await (await fetch('/plan',{method:'POST'})).json();if(!r.ok){estado.textContent='⚠ No se pudo actualizar: '+r.salida;return}
+  await cargarPlan();ir(Math.min(tt,P.duracion));if(was)play()};
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'&&e.key!==' ')return;const k=e.key.toLowerCase();
+  if(k===' '){e.preventDefault();playing?pausar():play()}else if(k==='arrowright')ir(t+5);else if(k==='arrowleft')ir(t-5);
+  else if(k==='l')ir(t+30);else if(k==='j')ir(t-30);else if(k==='v')cambiarVel()
+  else if(k===','||k==='.'){e.preventDefault();if(playing)pausar();ir(t+(k==='.'?1:-1)/30)}});   // cuadro por cuadro
+cargarPlan().then(()=>requestAnimationFrame(tick));
+</script></body></html>
