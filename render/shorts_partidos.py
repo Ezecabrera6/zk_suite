@@ -65,9 +65,12 @@ def rojo(img):
     r, g, b = img[..., 0], img[..., 1], img[..., 2]; return ((r > 110) & (r > g * 1.9) & (r > b * 1.7)).astype(np.float32)
 def ventana(hist, ancho):
     c = np.convolve(hist, np.ones(ancho), "valid"); return int(np.argmax(c)) + ancho / 2 if c.max() > 0 else len(hist) / 2
+MODO = "rojo"   # cómo se encuadra el producto: "rojo" (marco del mousepad/teclado) o "mano" (donde hay movimiento)
 def mapa_rojo(a, b, ks=(0.15, 0.5, 0.85)):
-    m = sum(rojo(cuadro(a + (b - a) * k)) for k in ks)
-    m[:, :CFG.get("ignorar_izq", 0)] *= 0.25                   # algo rojo fijo al costado que no es el producto
+    if MODO == "mano":   # pedido 19/11: con el mouse en uso, el marco rojo dejaba la mano y el mouse cortados al costado
+        m = sum((np.abs(cuadro(a + (b - a) * k) - cuadro(a + (b - a) * k + 0.25)).sum(2) > 60).astype(np.float32) for k in ks)
+    else: m = sum(rojo(cuadro(a + (b - a) * k)) for k in ks)
+    m[:, :CFG.get("ignorar_izq", 0)] *= 0.25                   # algo fijo al costado que no es el producto
     return m
 S480 = 1920 / 480
 def ventana_tramo(a, b):
@@ -142,6 +145,8 @@ def placa(gid, path):
 
 
 def build(s):
+    global MODO
+    modo_short = s.get("centrar", CFG.get("centrar", "rojo"))   # cada tramo puede pedir el suyo con {"centrar": ...}
     slug = f"short_{s['n']:02d}_{s['slug']}"; wk = WK / slug; wk.mkdir(exist_ok=True)
     tramos = []
     for a, b, o in s["tramos"]:
@@ -150,16 +155,17 @@ def build(s):
     planos, t, k = [], 0.0, 0
     for tr in tramos:
         F = round((tr["b"] - tr["a"]) * FPS); n = max(1, round(F / FPS / 2.2)); base = tr.get("vista", "cen")
-        tr["sal"] = t; tr["b"] = tr["a"] + F / FPS; tr["win"] = ventana_tramo(tr["a"], tr["b"])
+        MODO = tr.get("centrar", modo_short); tr["sal"] = t; tr["b"] = tr["a"] + F / FPS; tr["win"] = ventana_tramo(tr["a"], tr["b"])
         cortes = [round(F * j / n) for j in range(n + 1)]
         for j in range(n):
             vista = base if k % 2 == 0 else ("ancho_z" if base == "ancho" else "zoom")
-            planos.append({"a": tr["a"] + cortes[j] / FPS, "fr": cortes[j + 1] - cortes[j], "vista": vista, "win": tr["win"]}); k += 1
+            planos.append({"a": tr["a"] + cortes[j] / FPS, "fr": cortes[j + 1] - cortes[j], "vista": vista, "win": tr["win"], "modo": MODO}); k += 1
         t += F / FPS
     t_voz = t
     for i, p in enumerate(planos):
-        f = wk / f"p{i:02d}.mp4"; p["archivo"] = str(f)
+        MODO = p["modo"]
         cw, ch, x, y = encuadre(p["a"], p["a"] + p["fr"] / FPS, p["vista"], p["win"]); qw, qh, qx, qy = CARA_CROPS[i % 2]
+        f = wk / f"p{i:02d}_{p['a']:.2f}_{cw}x{ch}+{x}+{y}_{qy}.mp4"; p["archivo"] = str(f)   # el nombre lleva el encuadre: si cambia, se rehace
         p.update(crop=[cw, ch, x, y], cara=[qw, qh, qx, qy])
         fc = (f"[0:v]{CEN_VF}crop={cw}:{ch}:{x}:{y},scale={W}:{BOT_H}:flags=lanczos,setsar=1[ab];"
               f"[1:v]crop={qw}:{qh}:{qx}:{qy},scale={W}:{TOP_H}:flags=lanczos,setsar=1[ar];[ar][ab]vstack=inputs=2,fps={FPS},format=yuv420p[v]")

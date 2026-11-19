@@ -8,9 +8,9 @@
  "prompt": "Redragon King Ultra M999, mouse inalámbrico, base de carga, 54 gramos, DPI, polling rate, Hz, Mercado Libre.",
  "corrige": {"redragón": "redragon", "red dragon": "redragon", "polio": "polling", "tenedlo": "tenelo", "modo": "mouse", "empieza": "pesa", "venid": "vení"},
  "shorts": [
-  {"n": 1, "slug": "regular", "tramos": [
+  {"n": 1, "slug": "regular", "centrar": "mano", "tramos": [
    [897.34, 900.14, {"gfx": ["lt_precio", "carísimo"]}],
-   [855.06, 859.62, {}],
+   [855.06, 859.62, {"centrar": "rojo"}],
    [873.72, 876.38, {}],
    [881.50, 882.34, {}],
    [885.72, 888.46, {}],
