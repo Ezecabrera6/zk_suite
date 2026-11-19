@@ -12,7 +12,9 @@ config (JSON, rutas relativas a ZK_PROYECTO salvo las que empiezan con ZK_TOMA):
    "gfx": "10_work/gfx", "cenital_vf": "hflip,vflip,", "ignorar_izq": 70, "prompt": "...", "corrige": {"mal": "bien"},
    "shorts": [{"n": 1, "slug": "...", "tramos": [[desde, hasta, {opciones}], ...]}]}
   desde/hasta: segundo de la toma o ["min", lo, hi] (corta en el silencio más hondo de esa ventana).
-  opciones: {"vista": "ancho"} (producto más abierto), {"gfx": [id_cartel, palabra_ancla]}.
+  opciones: {"vista": "ancho"} (producto más abierto), {"gfx": [id_cartel, palabra_ancla]}, {"centrar": "rojo"|"mano"},
+  {"cx": px} (centro fijo en la cenital), {"cen_desde": s} (la cenital de otro momento: algo que pasó antes de decirlo),
+  {"pantalla": [x, y, w, h]} (recorte de la salida de OBS en el medio; pide "programa" en la config).
 Salida: <ZK_PROYECTO>/11_exports/shorts/short_NN_slug.mp4 + _portada.jpg y 10_work/shorts_vertical/<slug>/informe.json."""
 import glob, json, os, pathlib, re, subprocess, sys
 import numpy as np
@@ -177,13 +179,13 @@ def build(s):
         for j in range(n):
             vista = base if k % 2 == 0 else ("ancho_z" if base == "ancho" else "zoom")
             planos.append({"a": tr["a"] + cortes[j] / FPS, "fr": cortes[j + 1] - cortes[j], "vista": vista, "win": tr["win"], "modo": MODO,
-                           "pantalla": tr.get("pantalla")}); k += 1
+                           "pantalla": tr.get("pantalla"), "cen_a": tr.get("cen_desde", tr["a"]) + cortes[j] / FPS}); k += 1
         t += F / FPS
     t_voz = t
     for i, p in enumerate(planos):
         MODO = p["modo"]
-        cw, ch, x, y = encuadre(p["a"], p["a"] + p["fr"] / FPS, p["vista"], p["win"]); qw, qh, qx, qy = CARA_CROPS[i % 2]
-        f = wk / f"p{i:02d}_{p['a']:.2f}_{cw}x{ch}+{x}+{y}_{qy}.mp4"; p["archivo"] = str(f)   # el nombre lleva el encuadre: si cambia, se rehace
+        cw, ch, x, y = encuadre(p["cen_a"], p["cen_a"] + p["fr"] / FPS, p["vista"], p["win"]); qw, qh, qx, qy = CARA_CROPS[i % 2]
+        f = wk / f"p{i:02d}_{p['a']:.2f}_{p['cen_a']:.2f}_{cw}x{ch}+{x}+{y}_{qy}.mp4"; p["archivo"] = str(f)   # el nombre lleva el encuadre: si cambia, se rehace
         p.update(crop=[cw, ch, x, y], cara=[qw, qh, qx, qy])
         extra = []
         if p.get("pantalla"):   # pedido 19/11: cuando se muestra algo en la PC, en el medio va esa parte de la pantalla
@@ -196,7 +198,7 @@ def build(s):
             fc = (f"[0:v]{CEN_VF}crop={cw}:{ch}:{x}:{y},scale={W}:{BOT_H}:flags=lanczos,setsar=1[ab];"
                   f"[1:v]crop={qw}:{qh}:{qx}:{qy},scale={W}:{TOP_H}:flags=lanczos,setsar=1[ar];[ar][ab]vstack=inputs=2,fps={FPS},format=yuv420p[v]")
         if not f.exists():
-            run([FF, "-v", "error", "-y", "-ss", f"{p['a']:.3f}", "-i", str(CEN), "-ss", f"{p['a']:.3f}", "-i", str(CARA)] + extra + ["-filter_complex", fc,
+            run([FF, "-v", "error", "-y", "-ss", f"{p['cen_a']:.3f}", "-i", str(CEN), "-ss", f"{p['a']:.3f}", "-i", str(CARA)] + extra + ["-filter_complex", fc,
                  "-map", "[v]", "-frames:v", str(p["fr"]), "-an", "-c:v", "h264_nvenc", "-preset", "p5", "-cq", "19", "-g", "30", "-r", str(FPS), str(f)])
     (wk / "lista.txt").write_text("".join(f"file '{pathlib.Path(p['archivo']).as_posix()}'\n" for p in planos), encoding="utf-8")
     base = wk / "base.mp4"; run([FF, "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(wk / "lista.txt"), "-c", "copy", str(base)])
