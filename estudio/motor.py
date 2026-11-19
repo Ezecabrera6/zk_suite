@@ -339,6 +339,15 @@ def _operar(slug, o):
             cams += [{"a": x, "b": y, "rol": c["rol"]} for x, y in restar([[c["a"], c["b"]]], a, b)]
         if rol != "auto": cams.append({"a": round(a, 2), "b": round(b, 2), "rol": rol})
         ed["camaras"] = sorted(cams, key=lambda c: c["a"]); nota = f"cámara {rol} {a:.1f}–{b:.1f} s"
+    elif op == "ajustes":            # logo, outro y música: {"logo": bool, "logo_t": s|null, "outro": bool, "musica": bool, "musica_vol": 0–0.5}
+        aj = ajustes(ed)
+        for k in ("logo", "outro", "musica"):
+            if k in o: aj[k] = bool(o[k])
+        if "logo_t" in o: aj["logo_t"] = None if o["logo_t"] is None else round(num("logo_t"), 2)
+        if "musica_vol" in o: aj["musica_vol"] = round(_num(o["musica_vol"], 0, 0.5), 3)
+        ed["ajustes"] = aj
+        nota = "logo " + ("no" if not aj["logo"] else "auto" if aj["logo_t"] is None else f"en {aj['logo_t']:.1f} s") + \
+               f" · outro {'sí' if aj['outro'] else 'no'} · música {'%g' % aj['musica_vol'] if aj['musica'] else 'no'}"
     elif op == "deshacer":
         # Ctrl+Z seguidos van cada vez más atrás: se parte de la versión a la que volvió el deshacer anterior
         v = int(o.get("version") or (base or ed["version"]) - 1)
@@ -400,9 +409,38 @@ def planos(cfg, ed, frases):
 def a_edicion(pl, s):
     """Segundo de la toma → segundo del video editado (None si quedó cortado)."""
     for p in pl:
-        if p["s"] <= s < p["s"] + p["d"]:
+        if "especial" not in p and p["s"] <= s < p["s"] + p["d"]:
             return p["t"] + s - p["s"]
     return None
+
+
+AJUSTES = {"logo": True, "logo_t": None, "outro": True, "musica": False, "musica_vol": 0.045}
+ASSET = {"logo": "logo_intro_3s.mp4", "outro": "outro.mp4", "musica": "musica.wav"}
+
+
+def ajustes(ed):
+    return AJUSTES | (ed.get("ajustes") or {})
+
+
+def con_logo_y_outro(pl, aj, frases, log=print):
+    """Mete el logo después del gancho y el outro al final. El logo entra en el primer plano que arranca en (o después de)
+    logo_t; si logo_t no está definido, en la primera frase después de los 10 s (el gancho). Corre los tiempos de lo que sigue."""
+    out = list(pl)
+    for cual in ("logo", "outro"):
+        f = ASSETS / ASSET[cual]
+        if not aj[cual]: continue
+        if not f.exists(): log(f"falta {f}: va sin {cual}"); continue
+        dur = round(float(probe(f)["format"]["duration"]) * FPS) / FPS
+        if cual == "logo":
+            t0 = aj["logo_t"] if aj["logo_t"] is not None else next((x["a"] for x in frases if x["a"] >= 10), None)
+            i = next((k for k, p in enumerate(out) if t0 is not None and p["s"] >= t0 - 0.05), None)
+            if i is None or i == 0: continue           # el video es todo gancho: sin logo
+        else:
+            i = len(out)
+        t = out[i - 1]["t"] + out[i - 1]["d"]
+        out.insert(i, {"especial": cual, "archivo": str(f), "d": dur, "t": round(t, 3), "s": -1})
+        for p in out[i + 1:]: p["t"] = round(p["t"] + dur, 3)
+    return out
 
 
 def render(slug, calidad="360", log=print):
@@ -411,12 +449,21 @@ def render(slug, calidad="360", log=print):
     W, H = (1920, 1080) if calidad == "1080" else (640, 360)
     pl = planos(cfg, ed, frases)
     if not pl: raise ValueError("no queda nada sin cortar")
+    aj = ajustes(ed); pl = con_logo_y_outro(pl, aj, frases, log)
     cache = d / "10_work" / "estudio" / f"planos_{H}"; cache.mkdir(parents=True, exist_ok=True)
     work = pathlib.Path(tempfile.mkdtemp(prefix="estudio_", dir=d / "10_work" / "estudio"))
     # 1) cada plano, cacheado por hash: si cambia un corte, solo se rehacen los planos que cambiaron
     archivos = []
     for i, p in enumerate(pl):
-        f = cfg["fuentes"][p["fuente"]]; fr = round((p["t"] + p["d"]) * FPS) - round(p["t"] * FPS)
+        fr = round((p["t"] + p["d"]) * FPS) - round(p["t"] * FPS)
+        if "especial" in p:          # logo / outro: el archivo escalado al tamaño del video
+            out = cache / f"{p['especial']}_{hashlib.md5((p['archivo'] + str(fr)).encode()).hexdigest()[:10]}.mp4"
+            if not out.exists():
+                run(["ffmpeg", "-v", "error", "-y", "-i", p["archivo"], "-frames:v", str(fr), "-an",
+                     "-vf", f"scale={W}:{H}:force_original_aspect_ratio=decrease,pad={W}:{H}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps={FPS},format=yuv420p",
+                     *encoder(), "21" if H > 360 else "27", "-g", "60", "-r", str(FPS), str(out)])
+            archivos.append(out); continue
+        f = cfg["fuentes"][p["fuente"]]
         z = p["zoom"]; cw, ch = int(W / z) // 2 * 2, int(H / z) // 2 * 2
         vf = f"scale={W}:{H}" + (",hflip,vflip" if f.get("girar") else "") + (f",crop={cw}:{ch}:{(W - cw) // 2}:{int((H - ch) * 0.4)},scale={W}:{H}" if z > 1 else "")
         key = hashlib.md5(f"{f['archivo']}|{p['s']}|{fr}|{vf}|{encoder()}".encode()).hexdigest()[:16]
@@ -433,17 +480,40 @@ def render(slug, calidad="360", log=print):
     # 2) audio: la voz de cada tramo con fundidos cortos, respiraciones −8 dB entre frases, y −14 LUFS
     habla = [(f["a"] - 0.05, f["b"] + 0.35) for f in frases]
     voz = np.frombuffer(run(["ffmpeg", "-v", "error", "-i", str(d / "10_work/audio/voz_c.wav"), "-f", "f32le", "-ac", "1", "-ar", str(SR), "-"]).stdout, np.float32)
-    mix = np.zeros(int(total * SR) + SR, np.float32); n = int(0.012 * SR)
-    for a, b in tramos(ed, float(cfg["duracion"])):
-        x = voz[int(a * SR):int(b * SR)].copy()
+    mix = np.zeros(int(total * SR) + SR, np.float32); n = int(0.012 * SR); k = int(0.03 * SR)
+    def pone(x, en):
+        i = int(round(en * SR)); j = min(len(mix), i + len(x)); mix[i:j] += x[:j - i]
+    pegado = lambda p, q: q is not None and "especial" not in q and abs(q["s"] + q["d"] - p["s"]) < 1e-3   # q termina donde arranca p
+    for i, p in enumerate(pl):       # plano por plano, así el logo puede caer en medio de un tramo sin correr la voz
+        if "especial" in p:
+            x = np.frombuffer(run(["ffmpeg", "-v", "error", "-i", p["archivo"], "-t", f"{p['d']:.3f}", "-vn", "-f", "f32le", "-ac", "1", "-ar", str(SR), "-"]).stdout, np.float32).copy()
+            if len(x): pone(x, p["t"])
+            continue
+        a = p["s"]; x = voz[int(round(a * SR)):int(round(a * SR)) + int(round(p["d"] * SR))].copy()
         g = np.full(len(x), 0.4, np.float32)
         for h0, h1 in habla:
-            if h1 > a and h0 < b: g[max(0, int((h0 - a) * SR)):max(0, int((h1 - a) * SR))] = 1.0
-        k = int(0.03 * SR); x *= np.convolve(g, np.ones(k) / k, "same").astype(np.float32)
-        if len(x) > 2 * n: x[:n] *= np.linspace(0, 1, n); x[-n:] *= np.linspace(1, 0, n)
-        en = a_edicion(pl, a + 1e-3) or 0.0; i = int(round(en * SR)); j = min(len(mix), i + len(x)); mix[i:j] += x[:j - i]
+            if h1 > a and h0 < a + p["d"]: g[max(0, int((h0 - a) * SR)):max(0, int((h1 - a) * SR))] = 1.0
+        x *= np.convolve(np.concatenate([np.full(k, g[0]), g, np.full(k, g[-1])]), np.ones(k) / k, "same")[k:-k].astype(np.float32) if len(x) else x
+        if len(x) > 2 * n:           # fundido corto solo donde la voz no sigue de corrido
+            if not pegado(p, pl[i - 1] if i else None): x[:n] *= np.linspace(0, 1, n)
+            if not (i + 1 < len(pl) and pegado(pl[i + 1], p)): x[-n:] *= np.linspace(1, 0, n)
+        pone(x, p["t"])
     crudo = work / "voz.wav"
     run(["ffmpeg", "-v", "error", "-y", "-f", "f32le", "-ar", str(SR), "-ac", "1", "-i", "-", str(crudo)], input=mix.tobytes())
+    musica = ASSETS / ASSET["musica"]
+    if aj["musica"] and musica.exists():  # música de fondo baja, que se aparta cuando hablan (sidechain), sin sonar en el logo ni el outro
+        esp = [(p["t"], p["t"] + p["d"]) for p in pl if "especial" in p]
+        vol = "*".join([f"(1-between(t,{a0:.2f},{b0:.2f}))" for a0, b0 in esp]) or "1"
+        con = work / "voz_musica.wav"
+        run(["ffmpeg", "-v", "error", "-y", "-i", str(crudo), "-stream_loop", "-1", "-i", str(musica), "-filter_complex",
+             f"[0:a]aformat=sample_rates={SR}:channel_layouts=mono,asplit=2[v][k];"
+             f"[1:a]atrim=0:{total:.3f},aformat=sample_rates={SR}:channel_layouts=mono,highpass=f=80,lowpass=f=9000,"
+             f"volume='{_num(aj['musica_vol'], 0, 0.5):.3f}*{vol}':eval=frame,afade=t=in:d=0.5,afade=t=out:st={max(0, total - 2):.2f}:d=2[m0];"
+             f"[m0][k]sidechaincompress=threshold=0.03:ratio=6:attack=20:release=500[m];[v][m]amix=inputs=2:duration=first:normalize=0",
+             str(con)])
+        crudo = con
+    elif aj["musica"]:
+        log(f"falta {musica}: va sin música")
     def lufs(f):
         st = run(["ffmpeg", "-hide_banner", "-i", str(f), "-af", "ebur128", "-f", "null", "-"], text=True).stderr
         return float(re.search(r"I:\s+(-?[\d.]+) LUFS", st[st.rfind("Summary:"):]).group(1))
@@ -469,7 +539,7 @@ def render(slug, calidad="360", log=print):
     vid = (["-filter_complex", ";".join(fc), "-map", last, *encoder(), "21" if H > 360 else "27"] if fc else ["-map", "0:v", "-c:v", "copy"])
     run(["ffmpeg", "-v", "error", "-y", "-i", str(base), *ins, "-i", str(mezcla), *vid, "-map", f"{m + 1}:a",
          "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", "-shortest", str(salida)])
-    cuerpo = [p["d"] for p in pl]; por_min = {}
+    cuerpo = [p["d"] for p in pl if "especial" not in p]; por_min = {}
     for p in pl: por_min[int(p["t"] // 60)] = por_min.get(int(p["t"] // 60), 0) + 1
     rep = {"salida": salida.name, "version": ed["version"], "duracion_s": round(total, 1), "planos": len(pl),
            "plano_promedio_s": round(float(np.mean(cuerpo)), 2), "plano_mas_largo_s": round(max(cuerpo), 2),

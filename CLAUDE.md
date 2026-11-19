@@ -23,7 +23,7 @@ python estudio/servidor.py          # http://127.0.0.1:8780/
 - La persona elige la toma y las cámaras en «Nuevo video desde los crudos». El estudio hace voz, proxy,
   transcripción y silencios.
 - Las mismas operaciones de la página están en `estudio/motor.py`: `operar(slug, {"op": ...})` con `cortar`,
-  `restaurar`, `silencios`, `alternar`, `texto`, `borrar_texto`, `camara` y `deshacer`, y `render(slug, "360"|"1080")`.
+  `restaurar`, `silencios`, `alternar`, `texto`, `borrar_texto`, `camara`, `ajustes` (logo, outro, música) y `deshacer`, y `render(slug, "360"|"1080")`.
   Podés editar desde código con esas funciones: cada cambio queda como versión y la página lo muestra.
 - Para decidir cortes, leé `12_project/analysis/frases.json` (frase por frase, con la hora de cada palabra). Se cortan
   las retomas («vamos de nuevo», una frase repetida) y los silencios largos. Lo natural y lo gracioso queda.

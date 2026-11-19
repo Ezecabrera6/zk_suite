@@ -66,7 +66,7 @@ a{color:var(--acc)}
       <span id="tc"></span>
       <span style="margin-left:auto" class="ayuda">Ctrl+Z deshace (seguido, va más atrás) · seleccioná palabras para cortarlas</span>
     </div>
-    <canvas id="tl" height="70" title="Toma entera: gris = cortado, amarillo = textos, colores = cámara forzada. Clic para ir."></canvas>
+    <canvas id="tl" height="70" title="Toma entera: gris = cortado, amarillo = carteles, celeste = logo, colores abajo = cámara forzada. Clic para ir."></canvas>
     <div id="msg" role="status"></div>
   </div>
   <aside>
@@ -97,6 +97,16 @@ a{color:var(--acc)}
     </div>
     <div class="panel" id="p-versiones"><p class="ayuda">Cada cambio es una versión. Tocá una para volver a ella (se guarda como versión nueva: no se pierde nada).</p><div id="listaVers"></div></div>
     <div class="panel" id="p-render">
+      <fieldset style="border:1px solid var(--ln);border-radius:8px;padding:8px 10px;margin:0 0 10px">
+        <legend class="ayuda" style="margin:0">Logo, outro y música (de la carpeta ZK_ASSETS)</legend>
+        <label style="color:var(--tx);margin:4px 0"><input type="checkbox" id="ajLogo"> Logo después del gancho</label>
+        <div class="barra" style="margin-left:22px"><span id="ajLogoT" class="ayuda" style="margin:0"></span>
+          <button id="ajLogoAca">En el momento actual</button><button id="ajLogoAuto">Automático</button></div>
+        <label style="color:var(--tx);margin:8px 0 4px"><input type="checkbox" id="ajOutro"> Outro al final</label>
+        <label style="color:var(--tx);margin:8px 0 4px"><input type="checkbox" id="ajMus"> Música de fondo
+          <input type="number" id="ajVol" min="0" max="0.5" step="0.005" style="width:80px;margin-left:6px" aria-label="Volumen de la música"></label>
+        <p class="ayuda" style="margin:2px 0 0 22px">Baja (0,045) y se aparta cuando hablás. Las reglas del canal piden no usar música genérica: por defecto va apagada.</p>
+      </fieldset>
       <div class="barra"><button id="bR360" class="prim">Preview 360p</button><button id="bR1080">Final 1080p</button></div>
       <p class="ayuda">Cámara según lo que se dice, corte cada ~2,3 s, voz a −14 LUFS y los carteles. Los planos se guardan: si cambiás un corte, solo se rehace lo que cambió.</p>
       <div id="informe" class="ayuda"></div>
@@ -201,7 +211,15 @@ function pintarVersiones() {
     L.appendChild(d);
   });
 }
+const AJ0 = { logo: true, logo_t: null, outro: true, musica: false, musica_vol: 0.045 };
+const aj = () => ({ ...AJ0, ...(S.edicion.ajustes || {}) });
+function pintarAjustes() {
+  const a = aj(); $('ajLogo').checked = a.logo; $('ajOutro').checked = a.outro; $('ajMus').checked = a.musica;
+  if (document.activeElement !== $('ajVol')) $('ajVol').value = a.musica_vol;
+  $('ajLogoT').textContent = !a.logo ? 'sin logo' : a.logo_t === null ? 'en la primera frase después de los 10 s' : `en ${mmss(a.logo_t)} de la toma`;
+}
 function pintarRenders() {
+  pintarAjustes();
   const r = S.ultimo_render;
   $('informe').innerHTML = r ? `Último: <b>${r.salida}</b> · ${mmss(r.duracion_s)} · ${r.planos} planos · promedio ${r.plano_promedio_s} s · el más largo ${r.plano_mas_largo_s} s` : '';
   $('listaRenders').innerHTML = S.renders.map(x => `<div class="fila"><a href="#" data-u="${esc(x.url)}">${esc(x.nombre)}</a><span class="x tag">${x.hora}</span></div>`).join('');
@@ -214,6 +232,8 @@ function dibujar() {
   S.frases.forEach(f => { cx.fillStyle = '#3f6b4a'; cx.fillRect(X(f.a), H * .3, Math.max(1, X(f.b) - X(f.a)), H * .4); });
   cx.fillStyle = 'rgba(12,12,14,.82)'; cortes.forEach(([a, b]) => cx.fillRect(X(a), 0, Math.max(1, X(b) - X(a)), H));
   S.edicion.camaras.forEach(c => { cx.fillStyle = getComputedStyle(document.body).getPropertyValue('--cam-' + c.rol); cx.fillRect(X(c.a), H * .86, X(c.b) - X(c.a), H * .14); });
+  const lt = aj().logo && aj().logo_t !== null ? aj().logo_t : null;
+  if (lt !== null) { cx.fillStyle = '#3fa9f5'; cx.fillRect(X(lt) - 2, 0, 4 * devicePixelRatio, H); }
   cx.fillStyle = '#ffc531'; S.edicion.textos.forEach(t => cx.fillRect(X(t.t), 0, Math.max(2, X(t.dur)), H * .14));
   cx.fillStyle = '#fff'; cx.fillRect(X(v.currentTime || 0) - 1, 0, 2 * devicePixelRatio, H);
 }
@@ -285,6 +305,12 @@ document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => tab(b.d
 // ---------- procesos pesados
 async function render(calidad) { try { await api(`/api/p/${slug}/render`, { calidad }); vigilar(); } catch (e) { msg(e.message); } }
 $('bR360').onclick = () => render('360'); $('bR1080').onclick = () => render('1080');
+$('ajLogo').onchange = () => op({ op: 'ajustes', logo: $('ajLogo').checked });
+$('ajOutro').onchange = () => op({ op: 'ajustes', outro: $('ajOutro').checked });
+$('ajMus').onchange = () => op({ op: 'ajustes', musica: $('ajMus').checked });
+$('ajVol').onchange = () => op({ op: 'ajustes', musica_vol: +$('ajVol').value });
+$('ajLogoAca').onclick = () => op({ op: 'ajustes', logo: true, logo_t: v.currentTime });
+$('ajLogoAuto').onclick = () => op({ op: 'ajustes', logo: true, logo_t: null });
 let vigilando = null;
 async function vigilar() {
   clearTimeout(vigilando);

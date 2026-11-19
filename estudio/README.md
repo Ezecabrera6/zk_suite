@@ -36,7 +36,7 @@ Abrir `http://127.0.0.1:8780/`.
    | Cortes | **Borrar silencios** de más de N segundos; cada corte se puede apagar (los gatos, los ruidos de la caja) |
    | Carteles | El lower third oficial (`graficos/lower_third.py`) en el momento actual del video, con vista previa encima del video |
    | Versiones | Todas las versiones de la edición con su nota |
-   | Render | **Preview 360p** o **Final 1080p**, y el informe de ritmo |
+   | Render | **Logo** después del gancho (automático en la primera frase después de los 10 s, o en el momento que elijas), **outro** al final y **música** de fondo opcional (baja, 0,045, se aparta cuando hablás y no suena en el logo ni el outro; apagada por defecto). Después, **Preview 360p** o **Final 1080p** y el informe de ritmo |
 
    El reproductor en modo «edición» salta los cortes. Abajo está la toma entera: en gris lo cortado, en verde las
    frases, en amarillo los carteles y abajo de color las cámaras forzadas.
@@ -44,6 +44,8 @@ Abrir `http://127.0.0.1:8780/`.
    lo que se dice: al mostrar algo va `producto`, al hablar a cámara va `cara`, y si no hay nada claro alterna.
    Las cámaras forzadas mandan. Son dos encuadres por cámara, nunca dos planos iguales seguidos. Entre frases la voz baja
    8 dB más (sumado a los 10 dB que ya bajó la cadena C en los huecos) y sale a −14 LUFS. Los planos se cachean, así que cambiar un corte solo rehace lo que cambió.
+   Logo, outro y música salen de `ZK_ASSETS` (`logo_intro_3s.mp4`, `outro.mp4`, `musica.wav`); si falta alguno, el
+   render sigue sin él y lo avisa.
    Salida: `11_exports/previews/<proyecto>_vNNN_360p.mp4` o `11_exports/final/…_1080p.mp4`. El número es la
    versión de la edición.
 
@@ -64,7 +66,7 @@ un corte vale para todas.
 
 ## Lo que todavía no hace
 
-- Logo, outro, música y efectos de sonido. Por ahora se usan los renders de `ejemplos/`.
+- Efectos de sonido (por ahora están en los renders de `ejemplos/`).
 - B-roll de otros archivos y recuadros (cara chica sobre el producto).
 - Detectar retomas solas: `edl/edl_auto.py` lo hace sobre el corte multicámara, pero todavía no está integrado acá.
 - Comentarios por versión: para eso sirve el visor (`visor/servidor.py <carpeta del proyecto> --patron "*_360p.mp4"`).
