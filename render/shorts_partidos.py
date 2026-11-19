@@ -23,6 +23,7 @@ R = pathlib.Path(os.environ["ZK_PROYECTO"]); TOMA = os.environ.get("ZK_TOMA", ""
 ruta = lambda s: pathlib.Path(s.replace("<ZK_TOMA>", TOMA)) if s.startswith("<ZK_TOMA>") else R / s
 CEN, CARA, VOZ, GFX = ruta(CFG["cenital"]), ruta(CFG["cara"]), ruta(CFG["voz"]), ruta(CFG.get("gfx", "10_work/gfx"))
 CEN_VF = CFG.get("cenital_vf", "")
+PROG = ruta(CFG["programa"]) if CFG.get("programa") else None   # la salida de OBS (para tramos con {"pantalla": [x, y, w, h]})
 WK = R / "10_work/shorts_vertical"; WK.mkdir(parents=True, exist_ok=True)
 OUT = R / "11_exports/shorts"; OUT.mkdir(parents=True, exist_ok=True)
 W, H, FPS, SR = 1080, 1920, 30, 48000
@@ -159,7 +160,8 @@ def build(s):
         cortes = [round(F * j / n) for j in range(n + 1)]
         for j in range(n):
             vista = base if k % 2 == 0 else ("ancho_z" if base == "ancho" else "zoom")
-            planos.append({"a": tr["a"] + cortes[j] / FPS, "fr": cortes[j + 1] - cortes[j], "vista": vista, "win": tr["win"], "modo": MODO}); k += 1
+            planos.append({"a": tr["a"] + cortes[j] / FPS, "fr": cortes[j + 1] - cortes[j], "vista": vista, "win": tr["win"], "modo": MODO,
+                           "pantalla": tr.get("pantalla")}); k += 1
         t += F / FPS
     t_voz = t
     for i, p in enumerate(planos):
@@ -167,10 +169,18 @@ def build(s):
         cw, ch, x, y = encuadre(p["a"], p["a"] + p["fr"] / FPS, p["vista"], p["win"]); qw, qh, qx, qy = CARA_CROPS[i % 2]
         f = wk / f"p{i:02d}_{p['a']:.2f}_{cw}x{ch}+{x}+{y}_{qy}.mp4"; p["archivo"] = str(f)   # el nombre lleva el encuadre: si cambia, se rehace
         p.update(crop=[cw, ch, x, y], cara=[qw, qh, qx, qy])
-        fc = (f"[0:v]{CEN_VF}crop={cw}:{ch}:{x}:{y},scale={W}:{BOT_H}:flags=lanczos,setsar=1[ab];"
-              f"[1:v]crop={qw}:{qh}:{qx}:{qy},scale={W}:{TOP_H}:flags=lanczos,setsar=1[ar];[ar][ab]vstack=inputs=2,fps={FPS},format=yuv420p[v]")
+        extra = []
+        if p.get("pantalla"):   # pedido 19/11: cuando se muestra algo en la PC, en el medio va esa parte de la pantalla
+            px, py, pw, ph = p["pantalla"]; sh = round(W * ph / pw) // 2 * 2; f = f.with_name(f.stem + f"_pant{px}-{py}.mp4"); p["archivo"] = str(f)
+            fc = (f"[0:v]{CEN_VF}crop={cw}:{ch}:{x}:{y},scale={W}:{BOT_H}:flags=lanczos,crop={W}:{BOT_H - sh},setsar=1[ab];"
+                  f"[2:v]crop={pw}:{ph}:{px}:{py},scale={W}:{sh}:flags=lanczos,setsar=1[sc];"
+                  f"[1:v]crop={qw}:{qh}:{qx}:{qy},scale={W}:{TOP_H}:flags=lanczos,setsar=1[ar];[ar][sc][ab]vstack=inputs=3,fps={FPS},format=yuv420p[v]")
+            extra = ["-ss", f"{p['a']:.3f}", "-i", str(PROG)]
+        else:
+            fc = (f"[0:v]{CEN_VF}crop={cw}:{ch}:{x}:{y},scale={W}:{BOT_H}:flags=lanczos,setsar=1[ab];"
+                  f"[1:v]crop={qw}:{qh}:{qx}:{qy},scale={W}:{TOP_H}:flags=lanczos,setsar=1[ar];[ar][ab]vstack=inputs=2,fps={FPS},format=yuv420p[v]")
         if not f.exists():
-            run([FF, "-v", "error", "-y", "-ss", f"{p['a']:.3f}", "-i", str(CEN), "-ss", f"{p['a']:.3f}", "-i", str(CARA), "-filter_complex", fc,
+            run([FF, "-v", "error", "-y", "-ss", f"{p['a']:.3f}", "-i", str(CEN), "-ss", f"{p['a']:.3f}", "-i", str(CARA)] + extra + ["-filter_complex", fc,
                  "-map", "[v]", "-frames:v", str(p["fr"]), "-an", "-c:v", "h264_nvenc", "-preset", "p5", "-cq", "19", "-g", "30", "-r", str(FPS), str(f)])
     (wk / "lista.txt").write_text("".join(f"file '{pathlib.Path(p['archivo']).as_posix()}'\n" for p in planos), encoding="utf-8")
     base = wk / "base.mp4"; run([FF, "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(wk / "lista.txt"), "-c", "copy", str(base)])
