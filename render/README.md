@@ -31,7 +31,26 @@ El formato completo está en [`ejemplos/proyecto/proyecto_ejemplo.json`](../ejem
 Deja en `10_work/<slug>/final/timeline_<modo>.json` el mapa toma → edición, que usa `subtitulos/subtitulos.py`.
 Cada parte se cachea por hash: si se cambia un tramo, solo se rehace esa parte.
 
-## shorts.py: Shorts 9:16
+## shorts_partidos.py: Shorts 9:16 con pantalla partida (el estilo vigente)
+
+```bash
+python render/shorts_partidos.py ejemplos/m999/shorts.json all    # o 1, 2, 3…
+```
+
+Para videos grabados con dos cámaras sincronizadas (cara y cenital). Arriba la cara (1080x680, alterna plano normal y
+cerrado sin cortar el mentón) y abajo el producto (1080x1240, encuadrado solo buscando lo rojo del mousepad o del
+teclado). Cada tramo se corta en el silencio más hondo cerca del borde, los planos duran ~2,2 s, los subtítulos van de
+a una palabra (minúscula, blanca, sobre la unión de las cámaras) transcriptos tramo por tramo con Whisper large-v3 en
+GPU, un woosh suave en cada salto de tramo y −14 LUFS. Sin música, sin títulos ni gancho escrito, sin tarjeta final.
+Los carteles son los lower thirds de `graficos/carteles.py`, anclados a una palabra del tramo. Formato del JSON en el
+docstring del script.
+
+Antes de entregar: mirar una grilla de la cara cada 2 s (que entre entera) y leer `10_work/shorts_vertical/<slug>/uniones.txt`.
+
+## shorts.py: Shorts 9:16 (estilo anterior)
+
+> El gancho escrito, el título fijo y las claves en serif dorada se rechazaron por «demasiado IA» (pedido 10/11).
+> Para Shorts nuevos usar `shorts_partidos.py`.
 
 ```bash
 python render/shorts.py C:/ruta/a/mi_video/12_project/proyecto.json all    # o 1, 2, 3…

@@ -1,0 +1,49 @@
+﻿{
+ "cenital": "<ZK_TOMA> CAM-Cenital.mp4",
+ "cara": "<ZK_TOMA> CAM-StreamCam.mp4",
+ "voz": "10_work/audio/voz_c.wav",
+ "gfx": "10_work/gfx",
+ "cenital_vf": "hflip,vflip,",
+ "ignorar_izq": 70,
+ "prompt": "Redragon King Ultra M999, mouse inalámbrico, base de carga, 54 gramos, DPI, polling rate, Hz, Mercado Libre.",
+ "corrige": {"redragón": "redragon", "red dragon": "redragon", "polio": "polling", "tenedlo": "tenelo", "modo": "mouse", "empieza": "pesa", "venid": "vení"},
+ "shorts": [
+  {"n": 1, "slug": "regular", "tramos": [
+   [897.34, 900.14, {"gfx": ["lt_precio", "carísimo"]}],
+   [855.06, 859.62, {}],
+   [873.72, 876.38, {}],
+   [881.50, 882.34, {}],
+   [885.72, 888.46, {}],
+   [889.28, 893.10, {}],
+   [894.38, 896.64, {}],
+   [990.00, 995.06, {}]]},
+  {"n": 2, "slug": "54_gramos", "tramos": [
+   [255.62, 256.62, {}],
+   [249.14, 252.82, {}],
+   [259.70, 262.12, {}],
+   [264.22, 265.42, {"gfx": ["lt_peso", "54"]}],
+   [265.80, 267.64, {}],
+   [268.32, 269.84, {}],
+   [270.60, 273.02, {}],
+   [274.54, 277.54, {}]]},
+  {"n": 3, "slug": "se_mueve", "tramos": [
+   [552.48, ["min", 553.90, 554.60], {"vista": "ancho"}],
+   [556.00, 558.26, {"vista": "ancho"}],
+   [571.14, 572.50, {"gfx": ["lt_malo", "adherencia"]}],
+   [573.92, 575.40, {"vista": "ancho"}],
+   [446.12, 447.88, {}],
+   [448.58, 450.14, {}],
+   [990.00, 995.06, {}]]},
+  {"n": 4, "slug": "gatos", "tramos": [
+   [569.38, 570.34, {}],
+   [285.46, 288.12, {}],
+   [289.42, 290.04, {}],
+   [291.72, 292.92, {}],
+   [297.84, 298.66, {}],
+   [301.40, 303.48, {}],
+   [358.86, 360.76, {}],
+   [363.40, 365.38, {}],
+   [372.42, 374.32, {}],
+   [488.72, 489.90, {}]]}
+ ]
+}
