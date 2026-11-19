@@ -9,7 +9,7 @@
  "ignorar_izq": 70,
  "prompt": "Redragon King Ultra M999, mouse inalámbrico, base de carga, 54 gramos, DPI, polling rate, Hz, Mercado Libre.",
  "corrige_local": "12_project/corrige_shorts.json",
- "corrige": {"redragón": "redragon", "red dragon": "redragon", "polio": "polling", "tenedlo": "tenelo", "modo": "mouse", "empieza": "pesa", "venid": "vení"},
+ "corrige": {"redragón": "redragon", "red dragon": "redragon", "polio": "polling", "tenedlo": "tenelo", "modo": "mouse", "empieza": "pesa", "venid": "vení", "volviendo": "rompiendo"},
  "shorts": [
   {"n": 1, "slug": "regular", "centrar": "mano", "tramos": [
    [897.34, 900.14, {"gfx": ["lt_precio", "carísimo"], "pantalla": [440, 60, 1020, 640]}],
@@ -43,6 +43,7 @@
    [289.42, 290.04, {}],
    [291.72, 292.92, {}],
    [297.84, 303.90, {}],
+   [559.76, ["min", 568.50, 569.20], {"vista": "ancho", "cx": 1460}],
    [358.86, 360.76, {}],
    [363.40, 365.38, {}],
    [368.90, ["min", 369.50, 370.40], {}],
